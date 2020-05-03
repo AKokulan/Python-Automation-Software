@@ -415,7 +415,7 @@ class ProcessStudioProcessTab:
         lb_var.bind('<<ListboxSelect>>', self.lb_onselect) #bind the item listbox to right click
 
         # place ok button which will update the input label in the table and close the output window
-        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_input,win=input_window: self.ok_button_call(fr,var,win))
+        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_input,win=input_window: self.ok_button_call_input_window(fr,var,win))
         bt_ok.place(relx=.86, rely=.878)
 
     def lb_onselect(self,evt):
@@ -481,7 +481,7 @@ class ProcessStudioProcessTab:
                     # print(input_name_value_splitted[1])
         return input, input_name, input_value
 
-    def ok_button_call(self,fr,var,win):
+    def ok_button_call_input_window(self,fr,var,win):
         input_name,input_value,input=list(),list(),''
         children_windows=fr.winfo_children()
         loop_count=0
@@ -503,34 +503,62 @@ class ProcessStudioProcessTab:
         win.destroy()
         print(input)
 
-    def format_output(self,putput_list):
-        input_retrived = input
-        print('input_retrived\n',input_retrived)
-        input, input_name, input_value = list(), list(), list()
+    def ok_button_call_output_window(self, fr, var, win):
+        output_name, output_value,storein, output = list(), list(),list(), ''
+        children_windows = fr.winfo_children()
+        loop_count = 0
+        ent_count=0
+        for each in children_windows:
+            loop_count += 1
+            # print(each.winfo_class)
+            if each.winfo_class() == 'Label' and loop_count > 4:
+                # print(each.cget("text"))
+                output_name.append(each.cget("text"))
+            if each.winfo_class() == 'Entry':
+                ent_count+=1
+                if ent_count%2>0:
+                    storein.append(each.get())
+                if ent_count % 2 == 0:
+                    output_value.append(each.get())
+
+        if len(output_name) > 0:
+            for each in range(len(output_name)):
+                output = output + '\n\t' + output_name[each] + '=' + storein[each]  + '=' +  output_value[each]
+
+        var.set(output)
+        win.destroy()
+        print(output)
+
+
+    def format_output(self,output_list):
+        output_retrived = output_list
+        print('input_retrived\n',output_retrived)
+        output, output_name, output_value,storein = list(), list(), list(),list()
         # print(input_retrived.split("\n"))
-        for each_input in (input_retrived.split("\n")):
-            if len(each_input) != 0:
-                input_name_value_splitted = (each_input.replace("\t", "")).split("=")
-                print(input_name_value_splitted)
-                input.append(each_input.replace("\t", ""))
-                input_name.append(input_name_value_splitted[0])
+        for each_output in (output_retrived.split("\n")):
+            if len(each_output) != 0:
+                output_name_value_splitted = (each_output.replace("\t", "")).split("=")
+                print('output_name_value_splitted: ',output_name_value_splitted)
+                output.append(each_output.replace("\t", ""))
+                output_name.append(output_name_value_splitted[0])
+                storein.append(output_name_value_splitted[1])
 
                 nums = ['.', '1', '2', '3', '4', '5', '6', '7', '8', '9,', '0']
                 isNum = True
 
-                x = 1 if len(input_name_value_splitted) > 1 else 0
-                for each in input_name_value_splitted[x]:
+                x = 2 if len(output_name_value_splitted) > 1 else 0
+                for each in output_name_value_splitted[x]:
                     if each not in nums: isNum = False
                 if isNum == True:
-                    if "." in input_name_value_splitted[1]: input_value.append(float(input_name_value_splitted[x]))
-                    if "." not in input_name_value_splitted[1]: input_value.append(int(input_name_value_splitted[x]))
+                    if "." in output_name_value_splitted[x]: output_value.append(float(output_name_value_splitted[x]))
+                    if "." not in output_name_value_splitted[x]: output_value.append(int(output_name_value_splitted[x]))
 
                 else:
-                    input_value.append(input_name_value_splitted[x])
+                    output_value.append(output_name_value_splitted[x])
                     # print(input_name_value_splitted[1])
-        return input, input_name, input_value
+        return output, output_name, output_value,storein
 
-    def process_output_window(self,fr_table,handle_var,action_var,var_input,next_row):
+    def process_output_window(self,fr_table,handle_var,action_var,var_output,next_row):
         print('next row is',next_row)
         print("in toplevel window")
         input_window=Toplevel(self.process_studio_notebook)
@@ -558,35 +586,44 @@ class ProcessStudioProcessTab:
         fr_cn_input_table=Frame(cn_output_table)
 
 
-        lb_output_name=Label(fr_cn_input_table,text="Output Name", font=("Arial Bold", 10), bg='gray87', width=15,relief=GROOVE).grid(row=1,column=1)
-        lb_output_storein = Label(fr_cn_input_table, text="Store In", font=("Arial Bold", 10), bg='gray87', width=15,relief=GROOVE).grid(row=1, column=2)
-        lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=3)
-        lb_output_value = Label(fr_cn_input_table, text="Output Value", font=("Arial Bold", 10), bg='gray87', width=30,relief=GROOVE).grid(row=1, column=4)
-        lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=5)
+        lb_output_name=Label(fr_cn_input_table,text="Output Name", font=("Arial Bold", 10), bg='gray87', width=22,relief=GROOVE).grid(row=1,column=1)
+        lb_output_storein = Label(fr_cn_input_table, text="Store In", font=("Arial Bold", 10), bg='gray87', width=18,relief=GROOVE).grid(row=1, column=2)
+        #lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=3)
+        lb_output_value = Label(fr_cn_input_table, text="Output Value", font=("Arial Bold", 10), bg='gray87', width=30,relief=GROOVE).grid(row=1, column=3)
+        lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=4)
 
         #input=self.db.retrive_input_for_action(handle_var.get(),action_var.get())
-        print('printing input\n',var_input.get())
-        input=str(var_input.get())
-        input,inputname,input_value=self.format_input(input)
+        print('printing input\n',var_output.get())
+        output=str(var_output.get())
+        output, output_name, output_value,storein=self.format_output(output)
+        print(output, output_name, output_value,storein)
 
         r=2
         loop_count=0
-        '''for each in range(len(inputname)):
+        for each in range(len(output_name)):
             var_input_name=StringVar()
-            var_input_name.set(inputname[loop_count])
+            var_input_name.set(output_name[loop_count])
             lb_input_name_vale = Label(fr_cn_input_table, textvariable=var_input_name, font=("Arial", 10), bg='gray87', width=22).grid(row=r, column=1)
-            var_ent=StringVar()
-            var_ent.set(input_value[loop_count])
-            et_input_value_val=Entry(fr_cn_input_table, width=58,textvariable=var_ent)
 
-            et_input_value_val.grid(row=r, column=2)
-            et_input_value_val.bind('<Button-3>', lambda var_ent=var_ent: self.update_input_value_entrybox(var_ent))
+            var_storein = StringVar()
+            var_storein.set(storein[loop_count])
+            #var_storein.set(input_value[loop_count])
+            et_storein = Entry(fr_cn_input_table, width=24, textvariable=var_storein)
+            et_storein.bind('<Button-3>', lambda var_ent=var_storein: self.update_input_value_entrybox(var_ent))
+            et_storein.grid(row=r, column=2)
+
+            var_ent=StringVar()
+            var_ent.set(output_value[loop_count])
+            et_input_value_val=Entry(fr_cn_input_table, width=40,textvariable=var_ent)
+            et_input_value_val.grid(row=r, column=3)
+
             #et_input_value_val.configure(command=lambda ent=et_input_value_val: self.update_input_value_entrybox(ent,var_ent))
             bt_input_validate = Button(fr_cn_input_table, text="", bg='gray87', width=1)
-            bt_input_validate.grid(row=r, column=3)
             bt_input_validate.configure(command=lambda bt=bt_input_validate,ent=et_input_value_val,fr=cn_output_table, :self.input_row_validate_button_call(bt,ent,fr))
+            bt_input_validate.grid(row=r, column=4)
+
             r+=1
-            loop_count+=1'''
+            loop_count+=1
 
         cn_output_table.create_window(0, 0, anchor = 'nw', window = fr_cn_input_table)
 
@@ -629,7 +666,7 @@ class ProcessStudioProcessTab:
 
         lb_var.bind('<<ListboxSelect>>', self.lb_onselect)
 
-        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_input,win=input_window: self.ok_button_call(fr,var,win))
+        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_output,win=input_window: self.ok_button_call_output_window(fr,var,win))
         bt_ok.place(relx=.86, rely=.878)
 
     def add_row_button_call(self, ps_process_tab):

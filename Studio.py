@@ -543,10 +543,10 @@ class ObjectStudio(object):
                 if each_output_entry.winfo_class() == 'Entry':
                     loop_count += 1
                     output_entry_value = each_output_entry.get()
-                    if loop_count % 2 != 0: output = output + '\n\t' + output_entry_value
+                    if loop_count % 2 != 0: output = output + '\n\t' + output_entry_value + '='+ '&dummy&'
                     if loop_count % 2 == 0:
                         if len(output_entry_value) > 0: output = output + '=' + output_entry_value
-                        if len(output_entry_value) == 0: output = output + '=' + "str()"
+                        if len(output_entry_value) == 0: output = output + '=' +  "str()"
 
             #retrive and format module
             table_frame_os_module_table=object_studio_module_tab.winfo_children()[0].winfo_children()[0].winfo_children()[0].winfo_children()
@@ -624,7 +624,7 @@ class ObjectStudio(object):
                 if each_output_entry.winfo_class() == 'Entry':
                     loop_count += 1
                     output_entry_value = each_output_entry.get()
-                    if loop_count % 2 != 0: output = output + '\n\t' + output_entry_value
+                    if loop_count % 2 != 0: output = output + '\n\t' + output_entry_value + '='+ '&dummy&'
                     if loop_count % 2 == 0:
                         if len(output_entry_value) > 0: output = output + '=' + output_entry_value
                         if len(output_entry_value) == 0: output = output + '=' + "str()"
@@ -709,7 +709,7 @@ class ObjectStudio(object):
                 if each_output_entry.winfo_class() == 'Entry':
                     loop_count += 1
                     output_entry_value = each_output_entry.get()
-                    if loop_count % 2 != 0: output = output + '\n\t' + output_entry_value
+                    if loop_count % 2 != 0: output = output + '\n\t' + output_entry_value + '='+ '&dummy&'
                     if loop_count % 2 == 0:
                         if len(output_entry_value) > 0: output = output + '=' + output_entry_value
                         if len(output_entry_value) == 0: output = output + '=' + "str()"
