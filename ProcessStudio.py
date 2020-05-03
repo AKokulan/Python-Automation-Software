@@ -1036,6 +1036,10 @@ class ProcessStudioProcessTab:
 
 class ProcessStudioOutputTab:
 
+    #comment
+    def test(self):
+        print('test')
+
     def __init__(self,process_studio_notebook,database):
         self.process_studio_notebook=process_studio_notebook
         self.db=database
