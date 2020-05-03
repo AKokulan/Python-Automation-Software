@@ -733,7 +733,7 @@ class ProcessStudioProcessTab:
                               textvariable=var_output1)
             lb_output.grid(row=next_row, column=5)
             lb_output.bind('<Button-1>',
-                           lambda x: self.process_output_window(fr_table, var_handler1, var_action1, var_input1, next_row))
+                           lambda x: self.process_output_window(fr_table, var_handler1, var_action1, var_output1, next_row))
             tem_var_list.append(var_output1)
 
             # create exception label
@@ -846,7 +846,7 @@ class ProcessStudioProcessTab:
                                   textvariable=var_output)
                 lb_output.grid(row=next_row, column=5)
                 lb_output.bind('<Button-1>',
-                               lambda x: self.process_output_window(fr_table, var_handler, var_action, var_input,
+                               lambda x: self.process_output_window(fr_table, var_handler, var_action, var_output,
                                                                     next_row))
                 tem_var_list.append(var_output)
 
@@ -1003,7 +1003,7 @@ class ProcessStudioProcessTab:
                                   textvariable=var_output)
                 lb_output.grid(row=next_row, column=5)
                 lb_output.bind('<Button-1>',
-                               lambda x: self.process_output_window(fr_table, var_handler, var_action, var_input,
+                               lambda x: self.process_output_window(fr_table, var_handler, var_action, var_output,
                                                                     next_row))
                 # self.var_table.append(var_output)
                 tem_var_list.append(var_output)
