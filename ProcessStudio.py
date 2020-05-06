@@ -477,7 +477,11 @@ class ProcessStudioProcessTab:
                     if "." not in input_name_value_splitted[1]: input_value.append(int(input_name_value_splitted[x]))
 
                 else:
-                    input_value.append(input_name_value_splitted[x])
+
+                    if input_name_value_splitted[x]!='str()':
+                        input_value.append(input_name_value_splitted[x])
+                    else:
+                        input_value.append('')
                     # print(input_name_value_splitted[1])
         return input, input_name, input_value
 
@@ -490,10 +494,14 @@ class ProcessStudioProcessTab:
             #print(each.winfo_class)
             if each.winfo_class()=='Label' and loop_count>3:
                 #print(each.cget("text"))
-                input_name.append(each.cget("text"))
+                input_name.append(each.cget("text")) if len(each.cget("text")) >0 else input_name.append(each.cget("text"))
+                #input_name.append(each.cget("text"))
             if each.winfo_class() == 'Entry':
-                #print(each.get())
-                input_value.append(each.get())
+                if len(each.get()) > 0:
+                    input_value.append(each.get())
+                else:
+                    input_value.append('str()')
+
 
         if len(input_name)>0:
             for each in range(len(input_name)):
@@ -517,9 +525,11 @@ class ProcessStudioProcessTab:
             if each.winfo_class() == 'Entry':
                 ent_count+=1
                 if ent_count%2>0:
-                    storein.append(each.get())
+                    if len(each.get())>0:storein.append(each.get())
+                    if len(each.get()) == 0: storein.append('&dummy&')
                 if ent_count % 2 == 0:
-                    output_value.append(each.get())
+                    if len(each.get())>0:output_value.append(each.get())
+                    if len(each.get()) == 0: output_value.append('str()')
 
         if len(output_name) > 0:
             for each in range(len(output_name)):
@@ -541,20 +551,26 @@ class ProcessStudioProcessTab:
                 print('output_name_value_splitted: ',output_name_value_splitted)
                 output.append(each_output.replace("\t", ""))
                 output_name.append(output_name_value_splitted[0])
-                storein.append(output_name_value_splitted[1])
+                if len(output_name_value_splitted)>1:
+                    if output_name_value_splitted[1]!='&dummy&':storein.append(output_name_value_splitted[1])
+                    if output_name_value_splitted[1] == '&dummy&': storein.append('')
+
 
                 nums = ['.', '1', '2', '3', '4', '5', '6', '7', '8', '9,', '0']
                 isNum = True
 
-                x = 2 if len(output_name_value_splitted) > 1 else 0
-                for each in output_name_value_splitted[x]:
-                    if each not in nums: isNum = False
-                if isNum == True:
-                    if "." in output_name_value_splitted[x]: output_value.append(float(output_name_value_splitted[x]))
-                    if "." not in output_name_value_splitted[x]: output_value.append(int(output_name_value_splitted[x]))
+                x = 2 if len(output_name_value_splitted) > 1 else 0 #derive the position of the output value
+                if output_name_value_splitted[x].strip() !=None:
+                    print("output value is not  ''")
+                    for each in output_name_value_splitted[x]: # check whether the ourput value is a num of text
+                        if each not in nums : isNum = False
+                if isNum == True: # do below activity if the output value is number
+                    if "." in output_name_value_splitted[x]: output_value.append(float(output_name_value_splitted[x])) # if output value consit of '.', the append it as a float
+                    if "." not in output_name_value_splitted[x]: output_value.append(int(output_name_value_splitted[x])) # if output value doesnot consist of '.', the append it as a int
 
                 else:
-                    output_value.append(output_name_value_splitted[x])
+                    if output_name_value_splitted[x]!='str()':output_value.append(output_name_value_splitted[x]) # append output value as text
+                    if output_name_value_splitted[x] == 'str()': output_value.append('')  # append output value as text
                     # print(input_name_value_splitted[1])
         return output, output_name, output_value,storein
 
@@ -595,7 +611,10 @@ class ProcessStudioProcessTab:
         #input=self.db.retrive_input_for_action(handle_var.get(),action_var.get())
         print('printing input\n',var_output.get())
         output=str(var_output.get())
-        output, output_name, output_value,storein=self.format_output(output)
+        if output!='Output':
+            output, output_name, output_value,storein=self.format_output(output)
+        else:
+            output, output_name, output_value, storein = '','','',''
         print(output, output_name, output_value,storein)
 
         r=2
@@ -871,7 +890,9 @@ class ProcessStudioProcessTab:
                                  textvariable=var_input)
                 lb_input.grid(row=next_row, column=4)
                 lb_input.bind('<Button-1>',
-                              lambda x: self.process_input_window(fr_table, var_handler, var_action, var_input,
+                              lambda fr_table=fr_table, var_handler=var_handler,
+                                     var_action=var_action, var_input=var_input,
+                                     next_row=next_row: self.process_input_window(fr_table, var_handler, var_action, var_input,
                                                                   next_row))
 
                 tem_var_list.append(var_input)
@@ -883,7 +904,9 @@ class ProcessStudioProcessTab:
                                   textvariable=var_output)
                 lb_output.grid(row=next_row, column=5)
                 lb_output.bind('<Button-1>',
-                               lambda x: self.process_output_window(fr_table, var_handler, var_action, var_output,
+                               lambda fr_table=fr_table,var_handler=var_handler,
+                                      var_action=var_action,
+                                      var_output=var_output,next_row=next_row: self.process_output_window(fr_table, var_handler, var_action, var_output,
                                                                     next_row))
                 tem_var_list.append(var_output)
 
