@@ -575,6 +575,15 @@ class ProcessStudioProcessTab:
         return output, output_name, output_value,storein
 
     def process_output_window(self,fr_table,handle_var,action_var,var_output,next_row):
+        #derive widgets in output tab
+        fr_config_output = (self.process_studio_output_tab.winfo_children())[0]
+        fr_table_output = (((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+        fr_table_output.update_idletasks()
+        y_socrollbar_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
+        cn_on_fr_table_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0])
+        children_windows_tbl_output=fr_table_output.winfo_children()
+
+
         print('next row is',next_row)
         print("in toplevel window")
         input_window=Toplevel(self.process_studio_notebook)
@@ -590,6 +599,7 @@ class ProcessStudioProcessTab:
         fr_output_var_listbox.place(relx=.75, rely=.1, relwidth=.24, relheight=.75)
 
         var_output_option=StringVar()
+        var_output_option.set('Output Variable')
         choices_output=['Output Variable','Application Moduler Variable','Global Variable']
         om_output_var_options=OptionMenu(input_window,var_output_option,*choices_output)
         om_output_var_options.place(relx=.75, rely=.025, relwidth=.24)
@@ -660,7 +670,32 @@ class ProcessStudioProcessTab:
         lb_var = Listbox(fr_output_var_listbox)
         lb_var.pack(side='left',fill='both',expand=True)
 
-        output=[]
+        # read all the ourput variable name from output tab
+        def update_listbox_for_output_variable(*args):
+            if var_output_option.get() == 'Output Variable':
+                output_var = []
+                loop_count = 0
+                ent_box_count = 0
+                for each in children_windows_tbl_output:
+                    print(each)
+                    if each.winfo_class() == 'Entry':
+                        print(each.get())
+                        ent_box_count += 1
+                        if ent_box_count % 2 > 0:
+                            output_var.append(each.get())
+
+                # insert all the output variable name into listbox
+                lb_var.delete(0, END)
+                for each in output_var:
+                    lb_var.insert(END, each)
+            else:
+                lb_var.delete(0, END)
+
+        update_listbox_for_output_variable()  # when open output window first time, update the output variable names in listbox
+        var_output_option.trace_variable('w',
+                                         update_listbox_for_output_variable)  # when the value is select as output variable in OptionMenu, update listbox
+
+        '''output=[]
         current_row = next_row
         print('previous row' ,current_row-1)
         if current_row>1:
@@ -673,11 +708,11 @@ class ProcessStudioProcessTab:
                  break
              if loop_count==output_wid_position:
                  output_wid_position+=7
-                 output.append(each_wid.cget('text'))
+                 output.append(each_wid.cget('text'))'''
 
-        print(output)
+        '''print(output)
         for i in range(100):
-            lb_var.insert(END, i)
+            lb_var.insert(END, i)'''
 
         # attach listbox to scrollbar
         lb_var.config(yscrollcommand=sb_variable_listbox.set)
