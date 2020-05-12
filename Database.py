@@ -178,6 +178,21 @@ class database:
         print(output)
         return output
 
+    def retrive_code_for_action(self,handler,action):
+        query = Query() # create query
+        action_doc = self.p_handler_table.search((query.type == "action") & (query.handler == handler) & (query.action == action)) # retrive document that matched the type handler and action
+        code = action_doc[0]['code'] # extrct code from document
+        print('action doc in retrive_code_for_action: ', action_doc)
+        print('code in retrive_code_for_action: ', code)
+        return code # return code
+
+    def retrive_module_for_handler(self,handler):
+        query = Query() # create query
+        action_doc = self.p_handler_table.search((query.type == "module") & (query.handler == handler)) # retrive document that matched the type handler
+        module = action_doc[0]['module'] # extrct module from document
+        print('action doc in --retrive_code_for_action: ', action_doc)
+        print('module in --retrive_code_for_action: ', module)
+        return module # return module
 
     def update_action_doc_in_primary_databse(self,frame,handler,action,module,input,output,code):
         try:

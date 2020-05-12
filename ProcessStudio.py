@@ -5,6 +5,7 @@ import tkinter.scrolledtext as scrolledtext
 import os,shutil
 from datetime import datetime
 import tkinter
+import re
 
 import Database
 import GuiGloballVariable
@@ -14,6 +15,10 @@ class ProcessStudio:
         self.process_studio_notebook=process_studio_notebook
         self.db=database
         self.root=100
+        #  1. create dictionary to store the strein key and value when click step button
+        #  2. called in step button call to retrive the value for input and update the result output value
+        #  3. called in refresh button call to clear the value
+        self.step_button_call_storein_dict={}
 
 
     def process_studio(self):
@@ -47,6 +52,8 @@ class ProcessStudioProcessTab:
         self.var_table=[]
         self.process_studio_output_tab=process_studio_output_tab
         #self.process_tab=ProcessStudioOutputTab(process_studio_notebook,database)
+
+        self.step_output_dict={} # output value dictonary for step. Dic will be cleared with refresh button call
 
 
     def process_tab(self,process_studio_process_tab):
@@ -134,7 +141,7 @@ class ProcessStudioProcessTab:
         def create_new_page_om_call(*args): self.create_new_page_om_call(var_page,var_process,var_cluster, ps_process_tab)
         var_page.trace("w", create_new_page_om_call)
 
-        bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10))
+        bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda fr=ps_process_tab : self.step_button_call(fr))
         bt_step.place(relx=0.0, rely=0.8, relwidth=0.04)
 
         bt_run = Button(fr_config, text="Run", font=("Arial Bold", 10))
@@ -423,7 +430,7 @@ class ProcessStudioProcessTab:
         w = evt.widget
         index = int(w.curselection()[0])
         global input_lb_selected_value
-        input_lb_selected_value = w.get(index)
+        input_lb_selected_value = (w.get(index))
         print('You selected item %d: "%s"' % (index, input_lb_selected_value))
 
     def update_input_value_entrybox(self,var_ent):
@@ -432,7 +439,7 @@ class ProcessStudioProcessTab:
         len_val=(len(var_evt.get()))+2
 
         #var_evt.delete(0,END)
-        text="'&" + str(input_lb_selected_value) + "&'"
+        text="&" + str(input_lb_selected_value) + "&"
         print(text)
         var_evt.insert(len_val,text)
 
@@ -1128,6 +1135,137 @@ class ProcessStudioProcessTab:
         # mark all the checkbutton values btaken to dictionary as 0
         for each in self.check_button_dict:
             self.check_button_dict[each] = 0
+
+    def step_button_call(self,fr_table):
+        print('printing var tabl in step button call: ',self.var_table)
+
+        #Collect all the row values for the rows in table
+        var_val=[] #create a list in which all the value for the vars for widgets in table will be stored
+        temp_var_val=[] # create a temporary list to store the values in each row
+        #loop_count=0
+        if len(self.var_table)>0: # if there are rows in table, peform the below activity
+            for each_row in self.var_table: # loop throgh each row in table
+                temp_var_val = [] # when loop each new row, clear values in tem_var_val list
+                for each_val in each_row: # loop in each value in in each row
+                    temp_var_val.append(each_val.get()) # append the each value into tem_var_val list
+                var_val.append(temp_var_val) #apend the tem_var_val list var_val list
+                #loop_count += 1
+        print(var_val)
+
+        # find the selected row and find the row the value for the selected row
+        row_selected=[] # create list store the selected row
+        for each in self.check_button_dict: # loop through check_button_dict which is updated whenever CheckButton in each row is selected
+            if self.check_button_dict[each]==1: # Find whether the check button is checked. (Checked -->1 , unchecked-->0)
+                row_selected.append(each) # if the check button is checked, take that row into row_selected
+        print(' row selected in step button call :', row_selected)
+        row_selected.sort()  # sort the selected row numbers in to ascending order
+        row=var_val[row_selected[0]-1] # store the values for the row selected into row
+        print('row in step button call : ', row)
+
+        handler=row[0]
+        action=row[1]
+
+        #input,input_name,input_value=self.format_input(row[2])
+        output_list, output_name_list, output_value_list, storein_list = self.format_output(row[3])
+        output_name=''
+        loop_count=1
+        for each in output_name_list:
+            if each !='' and loop_count>1:output_name=output_name + ',' + each
+            if each != '' and loop_count == 1:output_name=each
+            loop_count+=1
+
+
+        input=row[2]
+        output = row[3].replace("&","")
+
+        print(input)
+        code=self.db.retrive_code_for_action(handler,action)
+
+        #format modules
+        module_retrived=self.db.retrive_module_for_handler(handler)
+        module_list=module_retrived.split('\n')
+        module=''
+        for each in module_list:
+            if each!='':
+                module =module + '\nimport ' + each
+        print(module)
+
+        function = module + "\n" + "def action():" + str(input) + str(output) + "\n" + code + "\n\t" + "return " + str(output_name) + "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
+        #function = module + "\n" + "def action():" + str(input) + "\n" + code + "\n\t" + "return " + str(output_name) + "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
+
+        print(function)
+
+        output_dict={}
+        output_formatted=[]
+        output_formatted_temp = []
+        try:
+            exec(function)
+
+            print('printing outcome in step button call: ',outcome)
+            print('printing output names list in step button call: ', output_name_list)
+            loop_count = 0
+            for each_name in output_name_list:
+                output_formatted_temp = []
+                output_dict[each_name]=outcome[loop_count]
+                output_formatted_temp.append(each_name)
+                output_formatted_temp.append(storein_list[loop_count])
+                output_formatted_temp.append(outcome[loop_count])
+                output_formatted.append(output_formatted_temp)
+                storein_list[loop_count]
+                self.step_button_call_storein_dict[storein_list[loop_count]]=outcome[loop_count]
+                loop_count+=1
+
+            print("output_dict in step button call: ", output_dict)
+            print("output_formatted in step button call: ", output_formatted)
+            output_result=''
+            for each in output_formatted:
+                output_result=output_result+ "\n\t" + str(each[0]) + "=" + str(each[1])+ "=" +str(each[2])
+            print("output result(to update in label) in step button call: ", output_result)
+
+            (self.var_table[row_selected[0]-1][3]).set(output_result)
+
+        except Exception as e:
+            messagebox.showerror('Error','Error in running the step as: ' + str(e), parent=self.process_studio_notebook)
+
+        '''def function():
+            input
+            output
+            code
+            return output_name
+
+        #derive finction and execute
+        outcome_dict={}
+        output=((','.join(output_name_list)).replace("=","")).strip()
+        print(output)
+        function = ''.join(module_list) + "def action():\n"  +  ''.join(input_list) +  ''.join(output_list) + "\n" + code + "\n\t" + "return " + output +  "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
+        print(function)
+        try:
+            exec(function)
+            #output_value_list=outcome.split(",")
+            output_key_list=output.split(",")
+
+
+
+            if "tuple" in str(outcome):
+                loop_count = 0
+                for each in output_key_list:
+                    outcome_dict[each.strip()] = outcome[loop_count]
+                    loop_count += 1
+            else:
+                for each in output_key_list:outcome_dict[each.strip()] = outcome
+
+
+            print(outcome_dict)
+            messagebox.showinfo("Output",outcome_dict,parent=table_frame_os_module_tab)
+        except Exception as e:
+            error="Error in run as: " + str(e)
+            messagebox.showinfo("Error",  error , parent=table_frame_os_module_tab)'''
+
+
+
+
+
+
 
 class ProcessStudioOutputTab:
 
