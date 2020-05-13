@@ -15,10 +15,6 @@ class ProcessStudio:
         self.process_studio_notebook=process_studio_notebook
         self.db=database
         self.root=100
-        #  1. create dictionary to store the strein key and value when click step button
-        #  2. called in step button call to retrive the value for input and update the result output value
-        #  3. called in refresh button call to clear the value
-        self.step_button_call_storein_dict={}
 
 
     def process_studio(self):
@@ -54,6 +50,12 @@ class ProcessStudioProcessTab:
         #self.process_tab=ProcessStudioOutputTab(process_studio_notebook,database)
 
         self.step_output_dict={} # output value dictonary for step. Dic will be cleared with refresh button call
+
+        #  1. create dictionary to store the strein key and value when click step button
+        #  2. called in step button call to retrive the value for input and update the result output value
+        #  3. called in refresh button call to clear the value
+        self.step_button_call_storein_dict={}
+
 
 
     def process_tab(self,process_studio_process_tab):
@@ -1174,11 +1176,26 @@ class ProcessStudioProcessTab:
             if each != '' and loop_count == 1:output_name=each
             loop_count+=1
 
+        input_list, input_name_list, input_value_list = self.format_input(row[2])
+        print('printing input_value_list in step button call: ', input_value_list)
+        print('printing input_name_list in step button call: ', input_name_list)
+        input=''
+        loop_count=0
+        for each_name in input_name_list:
+            storein_key=""
+            if "&" in str(input_value_list[loop_count]):
+                storein_key=(input_value_list[loop_count])
+                input= "\n\t" + input + "\n\t" + each_name +"=" + str(self.step_button_call_storein_dict[storein_key])
 
-        input=row[2]
+            else:
+                input =  input  + "\n\t" + each_name + "=" + str(input_value_list[loop_count])
+
+            loop_count+=1
+        print('printing input in step button call: ', input)
+
+
+
         output = row[3].replace("&","")
-
-        print(input)
         code=self.db.retrive_code_for_action(handler,action)
 
         #format modules
@@ -1211,15 +1228,21 @@ class ProcessStudioProcessTab:
                 output_formatted_temp.append(storein_list[loop_count])
                 output_formatted_temp.append(outcome[loop_count])
                 output_formatted.append(output_formatted_temp)
-                storein_list[loop_count]
                 self.step_button_call_storein_dict[storein_list[loop_count]]=outcome[loop_count]
                 loop_count+=1
 
             print("output_dict in step button call: ", output_dict)
             print("output_formatted in step button call: ", output_formatted)
+            print("step_button_call_storein_dict in step button call: ", self.step_button_call_storein_dict)
+
+
+
             output_result=''
             for each in output_formatted:
-                output_result=output_result+ "\n\t" + str(each[0]) + "=" + str(each[1])+ "=" +str(each[2])
+                if each[1]!="":
+                    output_result=output_result+ "\n\t" + str(each[0]) + "=" + str(each[1])+ "=" +str(each[2])
+                else:
+                    output_result = output_result + "\n\t" + str(each[0]) + "=" + "&dummy&" + "=" + str(each[2])
             print("output result(to update in label) in step button call: ", output_result)
 
             (self.var_table[row_selected[0]-1][3]).set(output_result)
