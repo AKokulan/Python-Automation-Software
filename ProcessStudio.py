@@ -56,6 +56,9 @@ class ProcessStudioProcessTab:
         #  3. called in refresh button call to clear the value
         self.step_button_call_storein_dict={}
 
+        self.cluster_om_var_val="" #store value selected in cluster option menu with --create_new_cluster_om_call
+        self.process_om_var_val = "" #store value selected in process option menu with --create_new_process_om_call
+        self.page_om_var_val = "" #store value selected in page option menu with --create_new_page_om_call
 
 
     def process_tab(self,process_studio_process_tab):
@@ -157,8 +160,21 @@ class ProcessStudioProcessTab:
         bt_del_row.place(relx=0.96, rely=0.8, relwidth=0.04)
 
     def create_new_cluster_om_call(self,var,ps_process_tab):
+
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+
+        if self.cluster_om_var_val!="":
+            MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to exit from current cluster? Unsaved values will be lost!',
+                                            icon='warning', parent=fr_config)
+            if MsgBox == 'no':
+                var.set(self.cluster_om_var_val)
+                return
+
+        self.cluster_om_var_val=var.get()
+        children_windows_fr_tbl = fr_table.winfo_children()
+        for each in children_windows_fr_tbl:
+            each.destroy()
 
         var_value=var.get()
         children_windows=fr_config.winfo_children()
@@ -190,6 +206,21 @@ class ProcessStudioProcessTab:
     def create_new_process_om_call(self,var_process,var_cluster,ps_process_tab):
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+
+        if self.process_om_var_val != "":
+            MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to exit from current process? Unsaved values will be lost!',
+                                            icon='warning', parent=fr_config)
+            if MsgBox == 'no':
+                var_process.set(self.process_om_var_val)
+                return
+
+        self.process_om_var_val = var_process.get()
+
+        children_windows_fr_tbl = fr_table.winfo_children()
+        for each in children_windows_fr_tbl:
+            each.destroy()
+
+
         children_windows=fr_config.winfo_children()
 
         var_process_value=var_process.get()
@@ -227,8 +258,22 @@ class ProcessStudioProcessTab:
     def create_new_page_om_call(self,var_page,var_process,var_cluster,ps_process_tab):
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-        children_windows=fr_config.winfo_children()
 
+        if self.page_om_var_val != "":
+            MsgBox = messagebox.askquestion('Warning',
+                                            'Are you sure you want to exit from current page? Unsaved values will be lost!',
+                                            icon='warning', parent=fr_config)
+            if MsgBox == 'no':
+                var_page.set(self.page_om_var_val)
+                return
+
+        self.page_om_var_val = var_page.get()
+
+        children_windows_fr_tbl = fr_table.winfo_children()
+        for each in children_windows_fr_tbl:
+            each.destroy()
+
+        children_windows=fr_config.winfo_children()
 
         var_page_value=var_page.get()
         var_process_value=var_process.get()
