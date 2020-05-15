@@ -1164,30 +1164,39 @@ class ProcessStudioProcessTab:
         row=var_val[row_selected[0]-1] # store the values for the row selected into row
         print('row in step button call : ', row)
 
-        handler=row[0]
-        action=row[1]
+        handler=row[0] #Extract handlndler detail
+        action=row[1] # Extract action detail
 
-        #input,input_name,input_value=self.format_input(row[2])
+        #create list for output, output name , output value and store in variable
         output_list, output_name_list, output_value_list, storein_list = self.format_output(row[3])
-        output_name=''
+
+        # Crate comma separated outputname string..Ex: o1,o2,o3
+        output_name='' # Create output name comma separated variable
         loop_count=1
         for each in output_name_list:
-            if each !='' and loop_count>1:output_name=output_name + ',' + each
-            if each != '' and loop_count == 1:output_name=each
+            if each !='' and loop_count>1:output_name=output_name + ',' + each #only add if output name is not an empty string and add comma if more bthan one output name found
+            if each != '' and loop_count == 1:output_name=each # #only add if output name is not an empty string
             loop_count+=1
 
+        # create list for input, input name , input value
         input_list, input_name_list, input_value_list = self.format_input(row[2])
         print('printing input_value_list in step button call: ', input_value_list)
         print('printing input_name_list in step button call: ', input_name_list)
-        input=''
+
+        #create a input string
+        input='' #Create input variable
         loop_count=0
         for each_name in input_name_list:
             storein_key=""
-            if "&" in str(input_value_list[loop_count]):
-                storein_key=(input_value_list[loop_count])
+            if "&" in str(input_value_list[loop_count]): #Find input value consist of & key - which indicate that input value taken from the storein key value
+                storein_key=(input_value_list[loop_count]) # Stroe store in key
+                # Create input string
+                #1. storein dict is updated in runtime
+                #2. get the value from storein dict and repplace
                 input= "\n\t" + input + "\n\t" + each_name +"=" + str(self.step_button_call_storein_dict[storein_key])
 
             else:
+                #create input string assign it value
                 input =  input  + "\n\t" + each_name + "=" + str(input_value_list[loop_count])
 
             loop_count+=1
@@ -1195,40 +1204,40 @@ class ProcessStudioProcessTab:
 
 
 
-        output = row[3].replace("&","")
-        code=self.db.retrive_code_for_action(handler,action)
+        output = row[3].replace("&","") # replace & in output string
+        code=self.db.retrive_code_for_action(handler,action) # retrive code string
 
-        #format modules
-        module_retrived=self.db.retrive_module_for_handler(handler)
-        module_list=module_retrived.split('\n')
-        module=''
+        # retrieve and format modules
+        module_retrived=self.db.retrive_module_for_handler(handler) # retruive module string
+        module_list=module_retrived.split('\n') #create list by splitting "\n"
+        module='' # Create module string
         for each in module_list:
             if each!='':
-                module =module + '\nimport ' + each
+                module =module + '\nimport ' + each # add "import"  infront of each module and create module string
         print(module)
 
+        #create a function with the ablove formatted each string
+        #1. Output will be stored in a tupple named as "Outcome"
         function = module + "\n" + "def action():" + str(input) + str(output) + "\n" + code + "\n\t" + "return " + str(output_name) + "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
-        #function = module + "\n" + "def action():" + str(input) + "\n" + code + "\n\t" + "return " + str(output_name) + "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
-
         print(function)
 
-        output_dict={}
-        output_formatted=[]
+        output_dict={} # Create dictionary to store output name and value
+        output_formatted=[] # Create a 2D list to store each output..Ex: [['o1', '&a&', 25], ['o2', '&b&', 8515545]]
         output_formatted_temp = []
         try:
-            exec(function)
+            exec(function) # Execute the above function
 
             print('printing outcome in step button call: ',outcome)
             print('printing output names list in step button call: ', output_name_list)
             loop_count = 0
             for each_name in output_name_list:
-                output_formatted_temp = []
-                output_dict[each_name]=outcome[loop_count]
-                output_formatted_temp.append(each_name)
-                output_formatted_temp.append(storein_list[loop_count])
-                output_formatted_temp.append(outcome[loop_count])
-                output_formatted.append(output_formatted_temp)
-                self.step_button_call_storein_dict[storein_list[loop_count]]=outcome[loop_count]
+                output_formatted_temp = [] # Create a list to store output name storein and value. This list will be appended into output_formatted
+                output_dict[each_name]=outcome[loop_count] # From outcome tupple get the value for each output name and add it into output_dict
+                output_formatted_temp.append(each_name) # Append output name in output_formatted_temp list
+                output_formatted_temp.append(storein_list[loop_count]) #Append storein key in output_formatted_temp list
+                output_formatted_temp.append(outcome[loop_count]) #Append output value in output_formatted_temp list
+                output_formatted.append(output_formatted_temp) # Append output_formatted_temp list into output_formatted 2D list
+                self.step_button_call_storein_dict[storein_list[loop_count]]=outcome[loop_count] # Upodate step_button_call_storein_dict with the output value
                 loop_count+=1
 
             print("output_dict in step button call: ", output_dict)
@@ -1236,58 +1245,20 @@ class ProcessStudioProcessTab:
             print("step_button_call_storein_dict in step button call: ", self.step_button_call_storein_dict)
 
 
-
-            output_result=''
+            # Crete Output result string from output_formatted list to update the output label
+            output_result='' # Crete Output result string
             for each in output_formatted:
-                if each[1]!="":
+                if each[1]!="": # If strein key in any row in output_formatted list is not empty, add the value
                     output_result=output_result+ "\n\t" + str(each[0]) + "=" + str(each[1])+ "=" +str(each[2])
-                else:
+                else:# If store in key in any row in output_formatted list is  empty, add the store in key as "&dummy&"
                     output_result = output_result + "\n\t" + str(each[0]) + "=" + "&dummy&" + "=" + str(each[2])
             print("output result(to update in label) in step button call: ", output_result)
 
+            # Update varibale that hold the value for output label
             (self.var_table[row_selected[0]-1][3]).set(output_result)
 
         except Exception as e:
             messagebox.showerror('Error','Error in running the step as: ' + str(e), parent=self.process_studio_notebook)
-
-        '''def function():
-            input
-            output
-            code
-            return output_name
-
-        #derive finction and execute
-        outcome_dict={}
-        output=((','.join(output_name_list)).replace("=","")).strip()
-        print(output)
-        function = ''.join(module_list) + "def action():\n"  +  ''.join(input_list) +  ''.join(output_list) + "\n" + code + "\n\t" + "return " + output +  "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
-        print(function)
-        try:
-            exec(function)
-            #output_value_list=outcome.split(",")
-            output_key_list=output.split(",")
-
-
-
-            if "tuple" in str(outcome):
-                loop_count = 0
-                for each in output_key_list:
-                    outcome_dict[each.strip()] = outcome[loop_count]
-                    loop_count += 1
-            else:
-                for each in output_key_list:outcome_dict[each.strip()] = outcome
-
-
-            print(outcome_dict)
-            messagebox.showinfo("Output",outcome_dict,parent=table_frame_os_module_tab)
-        except Exception as e:
-            error="Error in run as: " + str(e)
-            messagebox.showinfo("Error",  error , parent=table_frame_os_module_tab)'''
-
-
-
-
-
 
 
 class ProcessStudioOutputTab:
