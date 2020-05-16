@@ -170,6 +170,35 @@ class ProcessStudioProcessTab:
         bt_del_row = Button(fr_config, text="Del", font=("Arial Bold", 10),command=lambda fr=ps_process_tab : self.del_row_button_call(fr))
         bt_del_row.place(relx=0.96, rely=0.8, relwidth=0.04)
 
+        lb_new_page = Label(fr_config, text="Page Index:",font=("Arial Bold", 10),anchor="w")
+        lb_new_page.place(relx=0.66, rely=0.35, relwidth=0.07)
+
+        #et_new_page = Entry(fr_config)
+        #et_new_page.place(relx=0.76, rely=0.37, relwidth=0.2)
+
+        var_page_index=IntVar()
+        sb_index = Spinbox(fr_config, from_=1, to=500,validate="all",textvariable=var_page_index)
+        sb_index.place(relx=0.76, rely=0.37, width=40)
+        def trace_page_index(*args): self.trace_page_index(var_page_index, ps_process_tab)
+        var_page_index.trace("w", trace_page_index)
+
+
+    def trace_page_index(self,var_page_index, ps_process_tab):
+        fr_config = (ps_process_tab.winfo_children())[0]
+        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+        try:
+
+            val=var_page_index.get()
+            if val<1 or val>500:
+                messagebox.showerror("Error","Invalid Value: Index can only be within  1-500 Range",parent=fr_config)
+                var_page_index.set(1)
+        except:
+            var_page_index.set(1)
+            messagebox.showerror("Error", "Invalid Value: Index can only be within  1-500 Range", parent=fr_config)
+
+
+
+
     def create_new_cluster_om_call(self,var,ps_process_tab):
 
         fr_config = (ps_process_tab.winfo_children())[0]
