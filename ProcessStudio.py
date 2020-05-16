@@ -113,7 +113,10 @@ class ProcessStudioProcessTab:
         lb_cluster.place(relx=0.018, rely=0.13, relwidth=0.07)
 
         var_cluster = StringVar()
-        var_cluster.set(cl_val)
+        if self.cluster_om_var_val.strip() == "Create New Cluster":
+            var_cluster.set("")
+        else:
+            var_cluster.set(self.cluster_om_var_val)
         choices_cluster = self.db.retrive_clusters()
         #var_cluster.set(cluster_val)
         om_cluster = OptionMenu(fr_config, var_cluster, *choices_cluster)
@@ -126,7 +129,11 @@ class ProcessStudioProcessTab:
         lb_process.place(relx=0.33, rely=0.13, relwidth=0.07)
 
         var_process = StringVar()
-        var_process.set(pr_val)
+        if self.process_om_var_val.strip() == "Create New Process":
+            var_process.set("")
+        else:
+            var_process.set(self.process_om_var_val)
+
         choices_process =self.db.retrive_process(var_cluster.get())
         om_cluster = OptionMenu(fr_config, var_process, *choices_process)
         om_cluster.place(relx=0.43, rely=0.085, relwidth=0.2)
@@ -138,7 +145,11 @@ class ProcessStudioProcessTab:
         lb_page.place(relx=0.66, rely=0.13, relwidth=0.07)
 
         var_page = StringVar()
-        var_page.set(pg_val)
+        if self.page_om_var_val.strip() == "Create New Page":
+            var_page.set("")
+        else:
+            var_page.set(self.page_om_var_val)
+
         choices_page = self.db.retrive_process_page(var_process.get())
         om_page = OptionMenu(fr_config, var_page, *choices_page)
         om_page.place(relx=0.76, rely=0.085, relwidth=0.2)
@@ -164,7 +175,8 @@ class ProcessStudioProcessTab:
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
 
-        if self.cluster_om_var_val!="":
+        print("cluster value in --create_new_cluster_om_call:  ", self.cluster_om_var_val)
+        if self.cluster_om_var_val!="" and  self.cluster_om_var_val.strip() != "Create New Cluster":
             MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to exit from current cluster? Unsaved values will be lost!',
                                             icon='warning', parent=fr_config)
             if MsgBox == 'no':
@@ -194,7 +206,7 @@ class ProcessStudioProcessTab:
             et_new_cluster=Entry(fr_config)
             et_new_cluster.place(relx=0.1, rely=0.37,relwidth=0.2)
 
-            bt_new_cluster_save = Button(fr_config, text="Save", bg='gray',command=lambda ent=et_new_cluster,fr=fr_config :self.cluster_save_button_call(ent,fr))
+            bt_new_cluster_save = Button(fr_config, text="Save", bg='gray',command=lambda ent=et_new_cluster,fr=fr_config,var=var :self.cluster_save_button_call(ent,fr,var))
             bt_new_cluster_save.place(relx=0.1, rely=0.58, relwidth=0.07)
 
             bt_new_cluster_cancel = Button(fr_config, text="Cancel", bg='gray',command=lambda fr=ps_process_tab,val=var_value :self.process_tab_config_frame_gui(fr,val,'',''))
@@ -207,7 +219,12 @@ class ProcessStudioProcessTab:
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
 
-        if self.process_om_var_val != "":
+        if var_cluster.get()=="":
+            messagebox.showerror("Error","Slelect Cluster Before Process..",parent=fr_config)
+            var_process.set("")
+            return
+
+        if self.process_om_var_val != "" and self.process_om_var_val != "Create New Process":
             MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to exit from current process? Unsaved values will be lost!',
                                             icon='warning', parent=fr_config)
             if MsgBox == 'no':
@@ -259,7 +276,13 @@ class ProcessStudioProcessTab:
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
 
-        if self.page_om_var_val != "":
+        if var_process.get()=="":
+            messagebox.showerror("Error","Slelect Process Before Page..",parent=fr_config)
+            var_page.set("")
+            return
+
+
+        if self.page_om_var_val != "" and self.page_om_var_val != "Create New Page":
             MsgBox = messagebox.askquestion('Warning',
                                             'Are you sure you want to exit from current page? Unsaved values will be lost!',
                                             icon='warning', parent=fr_config)
@@ -303,7 +326,12 @@ class ProcessStudioProcessTab:
                                                           val3=var_page_value :self.process_tab_config_frame_gui(fr,val1,val2,val3))
             bt_new_process_cancel.place(relx=0.85, rely=0.58, relwidth=0.07)
 
-    def cluster_save_button_call(self,ent,fr):
+        else:
+            # var_value = var.get()
+            self.process_tab_config_frame_gui(ps_process_tab, var_cluster_value, var_process_value, '')
+
+    def cluster_save_button_call(self,ent,fr,var):
+        self.cluster_om_var_val = var.get()
         clusters = self.db.retrive_clusters()
         print(clusters)
         new_cluster_value=ent.get()
@@ -313,12 +341,15 @@ class ProcessStudioProcessTab:
                                                                page='NA',handler='NA',action='NA',input='NA',output='NA',
                                                                exception='NA',status='NA')
             print('cluster updated')
+            var.set(new_cluster_value)
+            self.cluster_om_var_val = var.get()
             messagebox.showinfo("Success", 'Cluster created', parent=fr)
         else:
             messagebox.showerror("Error",'Cluster Already Exists',parent=fr)
             ent.delete(0,END)
 
     def process_save_button_call(self,ent,fr,var_process,var_cluster):
+        self.process_om_var_val=var_process.get()
         val_var_process=var_process.get()
         val_var_cluster=var_cluster.get()
         process = self.db.retrive_process(val_var_cluster)
@@ -331,12 +362,15 @@ class ProcessStudioProcessTab:
                                                                exception='NA',status='NA')
             print('cluster updated')
             messagebox.showinfo("Success", 'Process created', parent=fr)
+            var_process.set(new_process_value)
+            self.process_om_var_val = new_process_value
         else:
             messagebox.showerror("Error",'Process Already Exists',parent=fr)
             ent.delete(0,END)
 
     def new_page_save_button_call(self,ent,fr,var_page,var_process,var_cluster):
-        val_var_page=var_page.get()
+        self.page_om_var_val = var_page.get()
+        #val_var_page=var_page.get()
         val_var_process=var_process.get()
         val_var_cluster=var_cluster.get()
         page = self.db.retrive_process_page(val_var_process)
@@ -349,6 +383,8 @@ class ProcessStudioProcessTab:
                                                                exception='NA',status='NA')
             print('cluster updated')
             messagebox.showinfo("Success", 'Page created', parent=fr)
+            var_page.set(new_page_value)
+            self.page_om_var_val = new_page_value
         else:
             messagebox.showerror("Error",'Page Already Exists',parent=fr)
             ent.delete(0,END)
