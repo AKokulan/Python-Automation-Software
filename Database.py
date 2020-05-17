@@ -237,17 +237,25 @@ class database:
         print(page)
         return page
 
-    def create_new_process_page_in_primary_databse(self,frame,type,cluster,process,page,handler,action,input,output,exception,status):
-        print('page is'+page)
+    def retrive_process_page_doc(self,type,cluster,process,page):
+        query = Query()
+        process_doc = self.p_process_table.search((query.type == type) &(query.cluster == cluster) & (query.process == process) & (query.page == page))
+        return process_doc
+
+    def create_new_process_page_in_primary_databse(self,frame,key,type,cluster,process,page,pageindex,steps,outputstorein):
+        #print('page is'+page)
         try:
-            query = Query()
-            _page = self.p_process_table.search((query.cluster == cluster) & (query.process == process) & (query.page == page))
+            self.p_process_table.insert({'key': key, 'type': type, 'cluster': cluster, 'process': process,
+                                         'page': page, 'pageindex': pageindex, 'steps': steps,
+                                         'outputstorein': outputstorein})
+            messagebox.showinfo("Success","Process Saved", parent=frame)
+            '''query = Query()
+            _page = self.p_process_table.search((query.type == type) &(query.cluster == cluster) & (query.process == process) & (query.page == page))
             if len(_page)>0:
                 messagebox.showerror('Error',"Cluster/Process/Page  already exist",parent=frame)
             else:
-                self.p_process_table.insert({'type': type,'cluster':cluster ,'process':process,
-                                             'page':page,'handler':handler,'action':action,
-                                             'input':input,'output':output,'exception':exception,'status':status})
+                self.p_process_table.insert({'key': key,'type': type,'cluster':cluster ,'process':process,
+                                             'page':page,'pageindex':pageindex,'steps':steps,'outputstorein':outputstorein})'''
 
         except Exception as e:
             messagebox.showerror("Error", "Error in creating Cluster/Process/Page as: " + str(e), parent=frame)

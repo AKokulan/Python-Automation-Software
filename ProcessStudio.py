@@ -32,21 +32,31 @@ class ProcessStudio:
         #self.process_studio_notebook.add(object_studio_run_tab, text="Run")
 
 
-        process_tab=ProcessStudioProcessTab(self.process_studio_notebook,self.db,process_studio_output_tab)
-        process_tab.process_tab(process_studio_process_tab)
 
-        output_tab=ProcessStudioOutputTab(self.process_studio_notebook,self.db)
+
+        output_tab=ProcessStudioOutputTab(self.process_studio_notebook,self.db,process_studio_output_tab)
         output_tab.output_tab(process_studio_output_tab)
+
+        process_tab=ProcessStudioProcessTab(self.process_studio_notebook,self.db,process_studio_output_tab,output_tab)
+        process_tab.process_tab(process_studio_process_tab)
+        '''def callback_process_studio_output_tab():
+            print("clciked on process tab")
+            process_tab = ProcessStudioProcessTab(self.process_studio_notebook, self.db, process_studio_output_tab)
+            process_tab.process_tab(process_studio_process_tab)
+            print("clciked on process tab")
+
+        process_studio_process_tab.bind("<Button-1>", callback_process_studio_output_tab)'''
 
 class ProcessStudioProcessTab:
 
-    def __init__(self,process_studio_notebook,database,process_studio_output_tab):
+    def __init__(self,process_studio_notebook,database,process_studio_output_tab,output_tab_instance):
         self.process_studio_notebook=process_studio_notebook
         self.db=database
         #self.root=100
         self.check_button_dict = {}
         self.var_table=[]
         self.process_studio_output_tab=process_studio_output_tab
+        self.output_tab_instance=output_tab_instance
         #self.process_tab=ProcessStudioOutputTab(process_studio_notebook,database)
 
         self.step_output_dict={} # output value dictonary for step. Dic will be cleared with refresh button call
@@ -59,6 +69,7 @@ class ProcessStudioProcessTab:
         self.cluster_om_var_val="" #store value selected in cluster option menu with --create_new_cluster_om_call
         self.process_om_var_val = "" #store value selected in process option menu with --create_new_process_om_call
         self.page_om_var_val = "" #store value selected in page option menu with --create_new_page_om_call
+
 
 
     def process_tab(self,process_studio_process_tab):
@@ -96,27 +107,31 @@ class ProcessStudioProcessTab:
     def process_tab_config_frame_gui(self,ps_process_tab,cl_val,pr_val,pg_val):
         print('printing process childs')
 
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-        for each in fr_config.winfo_children():print(each)
-        for each in fr_table.winfo_children(): print(each)
+        fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
+        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
+        #for each in fr_config.winfo_children():print("Elements in process tab- configuration frame in call --process_tab_config_frame_gui",each)
+        #for each in fr_table.winfo_children(): print("Elements in process tab- table frame in call --process_tab_config_frame_gui",each)
 
 
-        children_windows = fr_config.winfo_children()
+        children_windows = fr_config.winfo_children() # Store all the children widgets of frame confiration frame in a list
 
+        # Destory all the widgets configuration frame
         loop_count=0
         for each in children_windows:
             loop_count+=1
             if loop_count>=1:
                 each.destroy()
+
+        #Create lable for cluster
         lb_cluster = Label(fr_config, text="Cluster:", font=("Arial Bold", 10))
         lb_cluster.place(relx=0.018, rely=0.13, relwidth=0.07)
 
-        var_cluster = StringVar()
-        if self.cluster_om_var_val.strip() == "Create New Cluster":
-            var_cluster.set("")
+        # Create option menu for cluster
+        var_cluster = StringVar() #Create string variable to store the selected cluster value
+        if self.cluster_om_var_val.strip() == "Create New Cluster": # Check whether the selected cluster value is ""Create New Cluster". note:self.cluster_om_var_val hold the selected cluster value
+            var_cluster.set("") # Set cluster as empty
         else:
-            var_cluster.set(self.cluster_om_var_val)
+            var_cluster.set(self.cluster_om_var_val) # Set cluster as per the value selected
         choices_cluster = self.db.retrive_clusters()
         #var_cluster.set(cluster_val)
         om_cluster = OptionMenu(fr_config, var_cluster, *choices_cluster)
@@ -157,6 +172,9 @@ class ProcessStudioProcessTab:
         def create_new_page_om_call(*args): self.create_new_page_om_call(var_page,var_process,var_cluster, ps_process_tab)
         var_page.trace("w", create_new_page_om_call)
 
+        def update_output_tab_on_page_change(*args): self.update_output_tab_on_page_change(var_page,var_process,var_cluster, ps_process_tab)
+        var_page.trace("w", update_output_tab_on_page_change)
+
         bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda fr=ps_process_tab : self.step_button_call(fr))
         bt_step.place(relx=0.0, rely=0.8, relwidth=0.04)
 
@@ -182,21 +200,133 @@ class ProcessStudioProcessTab:
         def trace_page_index(*args): self.trace_page_index(var_page_index, ps_process_tab)
         var_page_index.trace("w", trace_page_index)
 
+        # Create save button to create/update the document in database
+        bt_save = Button(fr_config, text="Save", font=("Arial Bold", 10),
+                         command=lambda: self.save_document_button_call(ps_process_tab,var_cluster,var_process,var_page,var_page_index))
+        bt_save.place(relx=0.08, rely=0.8, relwidth=0.04)
+
+    def retrive_page(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
+
+        # Store tha values for cluster, process, page and page index
+        val_cluster, val_process, val_page, val_page_index = var_cluster.get(), var_process.get(), var_page.get(), var_page_index.get()
+        existing_page_doc = self.db.retrive_process_page_doc(self, type, val_cluster, val_process, val_page)
+        existing_pages_key = []
+        for each_doc in existing_page_doc:
+            existing_pages_key.append(each_doc['key'])
+        existing_pages_key.sort(reverse=True)
+
+        latest_page_doc_key=existing_pages_key[0]
+        latest_page_doc=''
+        for each_doc in existing_page_doc:
+            if each_doc['key']==latest_page_doc_key:
+                latest_page_doc=each_doc
+
+        page_index_latest_page_doc=latest_page_doc['pageindex']
+        steps_latest_page_doc=latest_page_doc['steps'] #Store a list of rows. Ex:[[],[]]
+        storein_latest_page_doc = latest_page_doc['outputstorein'] # Store the dictionary of output stare in. Ex: {"a": "", "b": ""}
+
+        var_page_index.set(page_index_latest_page_doc)
+
+        for each_row in steps_latest_page_doc:
+            self.add_row_button_call(self, ps_process_tab)
+
+
+        loop_count=0
+        for each_row in range(len(steps_latest_page_doc)):
+            self.var_table[loop_count][0].set(steps_latest_page_doc[loop_count][0])
+            self.var_table[loop_count][1].set(steps_latest_page_doc[loop_count][1])
+            self.var_table[loop_count][2].set(steps_latest_page_doc[loop_count][2])
+            self.var_table[loop_count][3].set(steps_latest_page_doc[loop_count][3])
+            self.var_table[loop_count][4].set(steps_latest_page_doc[loop_count][4])
+
+
+
+
+        '''if len(existing_page_doc)==0:
+         self.db.create_new_process_page_in_primary_databse(self, ps_fr_config, key, "process",
+                                                            val_cluster, val_process, val_page, val_page_index, val_tbl_list,output_table_values)
+        else:'''
+
+
+
+    def save_document_button_call(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
+        ps_fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
+        ps_fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
+
+        # Store tha values for cluster, process, page and page index
+        val_cluster, val_process, val_page, val_page_index=var_cluster.get(),var_process.get(),var_page.get(),var_page_index.get()
+
+        # If value is blank for cluster or process or page or page index, show the error message and terminate the process
+        if val_cluster=="" or val_process=="" or val_page=="" or val_page_index=="":
+            messagebox.showerror("Error","Value missing for Cluster/Process/Page/Page Index", parent=ps_fr_config)
+            return
+        print("Values for clusster, process,page and page index in --save_document_button_call",val_cluster, val_process, val_page, val_page_index)
+
+        print("Variables in process tab table in --save_document_button_call",self.var_table)
+
+        # Get the values for each row in process tab table from -self.var_table list and store it in a list for each row
+        val_tbl_list=[] # Create 2D list to store the value for rows
+        row_num=1 # Store row number
+        for each_row in self.var_table:
+            temp_val_row=[] #temporary list to store the value for each row which will appended to -val_tbl_list
+            loop_count = 0 # Store loop count for each value in a row in an order as Handler/Input/Output/Action/Exception Handle
+            for each_var in each_row:
+                loop_count+=1
+                # Show the error if the value is empty for the fields other than Exception Handle
+                if loop_count!=5 and each_var.get()=="":
+                    messagebox.showerror("Error", "Value missing for Handler/Input/Output/Action in the row: " + str(row_num),parent=ps_fr_config)
+                    return
+                temp_val_row.append(each_var.get()) # Append the value for each field in a list
+            val_tbl_list.append(temp_val_row) # Append the rows into a list
+            row_num+=1
+
+        print("List of table values in process tab by row in ----save_document_button_call",val_tbl_list)
+
+        output_table_values=self.output_tab_instance.get_table_values() # Store the output storein variables values ina dictionary
+        print("Dictionary of table values in ----save_document_button_call",output_table_values)
+
+
+
+        #Derive key for page document.
+        now = datetime.utcnow() # Strore UTC time now
+        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+
+        print("key for process ----save_document_button_call",key)
+
+        #Create a new document for the page
+        self.db.create_new_process_page_in_primary_databse( ps_fr_config, key, "process",
+                                                           val_cluster, val_process, val_page, val_page_index,
+                                                           val_tbl_list, output_table_values)
+
+        '''existing_page_doc = self.db.retrive_process_page_doc(self, type, val_cluster, val_process, val_page)
+        if len(existing_page_doc)==0:
+            self.db.create_new_process_page_in_primary_databse(self, ps_fr_config, key, "process",
+                                                               val_cluster, val_process, val_page, val_page_index, val_tbl_list,output_table_values)
+        else:
+            existing_pages_key=[]
+            for each_doc in existing_page_doc:
+                existing_pages_key.append(each_doc['key'])
+            existing_pages_key.sort(reverse = True)
+            latest'''
+
+    def update_output_tab_on_page_change(self,var_page,var_process,var_cluster, ps_process_tab):
+        # destoy all the chidren widgets in output tab
+        self.output_tab_instance.destory_all_widgets_in_output_tab()
+        # recreate all the widgets by calling output tab function
+        self.output_tab_instance.output_tab(self.process_studio_output_tab)
 
     def trace_page_index(self,var_page_index, ps_process_tab):
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+        fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
+        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
         try:
-
-            val=var_page_index.get()
-            if val<1 or val>500:
-                messagebox.showerror("Error","Invalid Value: Index can only be within  1-500 Range",parent=fr_config)
-                var_page_index.set(1)
+            val=var_page_index.get() # Store the value of the process index spinbox
+            if val<1 or val>500 : # Check whther the selected value fall in between 0 to 500
+                messagebox.showerror("Error","Invalid Value: Index can only be within  1-500 Range",parent=fr_config) # Show the error if the value is out of range
+                var_page_index.set(1) # Set page index peinbox value as 1
         except:
-            var_page_index.set(1)
-            messagebox.showerror("Error", "Invalid Value: Index can only be within  1-500 Range", parent=fr_config)
-
-
+            var_page_index.set(1)# Set page index peinbox value as 1
+            messagebox.showerror("Error", "Invalid Value: Index can only be within  1-500 Range", parent=fr_config) #Show the error in any error
 
 
     def create_new_cluster_om_call(self,var,ps_process_tab):
@@ -367,8 +497,7 @@ class ProcessStudioProcessTab:
         print(new_cluster_value)
         if new_cluster_value not in clusters:
             self.db.create_new_process_page_in_primary_databse(frame=fr,type='process',cluster=new_cluster_value,process='NA',
-                                                               page='NA',handler='NA',action='NA',input='NA',output='NA',
-                                                               exception='NA',status='NA')
+                                                               page='NA',pageindex=0,steps="NA",outputstorein="NA")
             print('cluster updated')
             var.set(new_cluster_value)
             self.cluster_om_var_val = var.get()
@@ -387,8 +516,7 @@ class ProcessStudioProcessTab:
         print(new_process_value)
         if new_process_value not in process:
             self.db.create_new_process_page_in_primary_databse(frame=fr,type='process',cluster=val_var_cluster,process=new_process_value,
-                                                               page='NA',handler='NA',action='NA',input='NA',output='NA',
-                                                               exception='NA',status='NA')
+                                                               page='NA',pageindex=0,steps="NA",outputstorein="NA")
             print('cluster updated')
             messagebox.showinfo("Success", 'Process created', parent=fr)
             var_process.set(new_process_value)
@@ -408,8 +536,8 @@ class ProcessStudioProcessTab:
         print(new_page_value)
         if new_page_value not in page:
             self.db.create_new_process_page_in_primary_databse(frame=fr,type='process',cluster=val_var_cluster,process=val_var_process,
-                                                               page=new_page_value,handler='NA',action='NA',input='NA',output='NA',
-                                                               exception='NA',status='NA')
+                                                               page=new_page_value,pageindex=0,steps="NA",outputstorein="NA")
+
             print('cluster updated')
             messagebox.showinfo("Success", 'Page created', parent=fr)
             var_page.set(new_page_value)
@@ -1373,8 +1501,9 @@ class ProcessStudioProcessTab:
 
 class ProcessStudioOutputTab:
 
-    def __init__(self,process_studio_notebook,database):
+    def __init__(self,process_studio_notebook,database,process_studio_output_tab):
         self.process_studio_notebook=process_studio_notebook
+        self.process_studio_output_tab=process_studio_output_tab
         self.db=database
         self.check_button_dict = {}
         self.var_table = []
@@ -1763,3 +1892,20 @@ class ProcessStudioOutputTab:
         # mark all the checkbutton values btaken to dictionary as 0
         for each in self.check_button_dict:
             self.check_button_dict[each] = 0
+
+
+    def get_table_values(self):
+        val_table={} # Create dictionary to store variable values of table
+        row_num=1
+        # Get the value from variable to dictionary
+        for each_row in self.var_table:
+            val_table[each_row[0].get()]=each_row[1].get()
+
+        return val_table
+
+    def destory_all_widgets_in_output_tab(self):
+        child_widgets=self.process_studio_output_tab.winfo_children() #Store all chidlren widgets in output tab(these are frames)
+        #destoy all the chidren widgets
+        for each in child_widgets:
+            each.destroy()
+        self.var_table = [] # Set the variable list as empty
