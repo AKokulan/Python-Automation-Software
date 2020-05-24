@@ -175,6 +175,7 @@ class ProcessStudioProcessTab:
         def update_output_tab_on_page_change(*args): self.update_output_tab_on_page_change(var_page,var_process,var_cluster, ps_process_tab)
         var_page.trace("w", update_output_tab_on_page_change)
 
+
         bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda fr=ps_process_tab : self.step_button_call(fr))
         bt_step.place(relx=0.0, rely=0.8, relwidth=0.04)
 
@@ -205,11 +206,17 @@ class ProcessStudioProcessTab:
                          command=lambda: self.save_document_button_call(ps_process_tab,var_cluster,var_process,var_page,var_page_index))
         bt_save.place(relx=0.08, rely=0.8, relwidth=0.04)
 
+        def retrive_page(*args):self.retrive_page(ps_process_tab, var_cluster, var_process, var_page, var_page_index)
+        var_page.trace("w", retrive_page)
+
     def retrive_page(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
 
         # Store tha values for cluster, process, page and page index
         val_cluster, val_process, val_page, val_page_index = var_cluster.get(), var_process.get(), var_page.get(), var_page_index.get()
-        existing_page_doc = self.db.retrive_process_page_doc(self, type, val_cluster, val_process, val_page)
+        existing_page_doc = self.db.retrive_process_page_doc( "process", val_cluster, val_process, val_page)
+
+        print("existing_page_doc  in --retrive_page: ", existing_page_doc)
+
         existing_pages_key = []
         for each_doc in existing_page_doc:
             existing_pages_key.append(each_doc['key'])
@@ -220,6 +227,7 @@ class ProcessStudioProcessTab:
         for each_doc in existing_page_doc:
             if each_doc['key']==latest_page_doc_key:
                 latest_page_doc=each_doc
+        print("Latest page doc in --retrive_page: ",latest_page_doc)
 
         page_index_latest_page_doc=latest_page_doc['pageindex']
         steps_latest_page_doc=latest_page_doc['steps'] #Store a list of rows. Ex:[[],[]]
@@ -291,8 +299,8 @@ class ProcessStudioProcessTab:
         now = datetime.utcnow() # Strore UTC time now
         key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
             "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
-
         print("key for process ----save_document_button_call",key)
+
 
         #Create a new document for the page
         self.db.create_new_process_page_in_primary_databse( ps_fr_config, key, "process",
@@ -495,8 +503,14 @@ class ProcessStudioProcessTab:
         print(clusters)
         new_cluster_value=ent.get()
         print(new_cluster_value)
+
+        #Derive key for page document.
+        now = datetime.utcnow() # Strore UTC time now
+        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+
         if new_cluster_value not in clusters:
-            self.db.create_new_process_page_in_primary_databse(frame=fr,type='process',cluster=new_cluster_value,process='NA',
+            self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=new_cluster_value,process='NA',
                                                                page='NA',pageindex=0,steps="NA",outputstorein="NA")
             print('cluster updated')
             var.set(new_cluster_value)
@@ -514,8 +528,14 @@ class ProcessStudioProcessTab:
         print(process)
         new_process_value=ent.get()
         print(new_process_value)
+
+        #Derive key for page document.
+        now = datetime.utcnow() # Strore UTC time now
+        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+
         if new_process_value not in process:
-            self.db.create_new_process_page_in_primary_databse(frame=fr,type='process',cluster=val_var_cluster,process=new_process_value,
+            self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=val_var_cluster,process=new_process_value,
                                                                page='NA',pageindex=0,steps="NA",outputstorein="NA")
             print('cluster updated')
             messagebox.showinfo("Success", 'Process created', parent=fr)
@@ -534,8 +554,14 @@ class ProcessStudioProcessTab:
         print(page)
         new_page_value=ent.get()
         print(new_page_value)
+
+        #Derive key for page document.
+        now = datetime.utcnow() # Strore UTC time now
+        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+
         if new_page_value not in page:
-            self.db.create_new_process_page_in_primary_databse(frame=fr,type='process',cluster=val_var_cluster,process=val_var_process,
+            self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=val_var_cluster,process=val_var_process,
                                                                page=new_page_value,pageindex=0,steps="NA",outputstorein="NA")
 
             print('cluster updated')

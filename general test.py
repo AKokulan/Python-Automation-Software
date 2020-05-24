@@ -18,20 +18,12 @@ for each in file:
     #each=each.replace('\','\\\')
     exec(each)'''
 
-# Reset var and delete all old options
-menu=os_module_action_option_menu['menu']
-os_modules_action_optionmenu_var.set('')
-menu.delete(0, 'end')
 
+from datetime import datetime
 
-def module_refersh_button_call(a):
-    print("actions: ",action)
-    os_modules_action_optionmenu_var.set(action)
-
-    self.os_module_action_optionmenu_call(object_studio_module_tab,object_studio_input_tab,object_studio_output_tab,object_studio_code_tab)
-
-    os_modules_action_optionmenu_var.trace("w", module_refersh_button_call)
-
-
-for actions in action_list:
-    menu.add_command(label=actions,command=lambda action=actions :module_refersh_button_call())
+# date object of today's date
+now=datetime.utcnow()
+key=now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime("%M") + now.strftime("%S")  + now.strftime("%f") + "-P"
+print("Current year:", now.year)
+print("Current day:", now.day)
+print(key)
