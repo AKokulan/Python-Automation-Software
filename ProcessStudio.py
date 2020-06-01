@@ -70,8 +70,6 @@ class ProcessStudioProcessTab:
         self.process_om_var_val = "" #store value selected in process option menu with --create_new_process_om_call
         self.page_om_var_val = "" #store value selected in page option menu with --create_new_page_om_call
 
-
-
     def process_tab(self,process_studio_process_tab):
         fr_config=Frame(process_studio_process_tab)
         fr_config.place(relx=0.015,rely=0.015,relheight=0.2,relwidth=0.97)
@@ -179,7 +177,7 @@ class ProcessStudioProcessTab:
         bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda fr=ps_process_tab : self.step_button_call(fr))
         bt_step.place(relx=0.0, rely=0.8, relwidth=0.04)
 
-        bt_run = Button(fr_config, text="Run", font=("Arial Bold", 10))
+        bt_run = Button(fr_config, text="Run", font=("Arial Bold", 10),command= lambda : self.run_button_call(ps_process_tab,var_page,var_process,var_cluster))
         bt_run.place(relx=0.04, rely=0.8, relwidth=0.04)
 
 
@@ -209,7 +207,234 @@ class ProcessStudioProcessTab:
         def retrive_page(*args):self.retrive_page(ps_process_tab, var_cluster, var_process, var_page, var_page_index)
         var_page.trace("w", retrive_page)
 
+    def run_button_call(self,ps_process_tab,var_page,var_process,var_cluster):
+        fr_config,fr_table=self.derive_processtab_widgets(ps_process_tab) # derive the elemnts in process tab
+        val_cluster=var_cluster.get() #Store cluster name selected
+        val_proces=var_process.get() # store process name selected
+
+        # retive the document of all the pages for the selected process
+        process_doc = self.db.retrive_all_pages_for_process(type="process", cluster=val_cluster, process=val_proces)
+        print("process document in --run_button_call: ", process_doc)
+
+        #retrive pages name of the selected process
+        pages_name=self.db.retrive_process_page(val_proces) #retrive all pages. Ex: ['Create New Page', 'Geneva Trade Upload', 'Trade Repair']
+        pages_name.remove("Create New Page") # remove Create New Page from the list
+        print("pages names list of the slected process in --run_button_call: ",pages_name)
+
+        #retrive lates page document for each page and store it in a list
+        latest_pages=[]
+        for each_page_name in pages_name:
+            each_latest_page=self.db.retrive_latest_page_for_page(type="process", cluster=val_cluster, process=val_proces,page=each_page_name)
+            latest_pages.append(each_latest_page)
+        print("latest page list of all the pages in --run_button_call: ",latest_pages)
+
+        sorted_latest_pages = []
+        for each in range(500):
+            for each_page in latest_pages:
+                #print(each_page)
+                #print(each_page['pageindex'])
+                if int(each_page['pageindex']) == each:
+                    sorted_latest_pages.append(each_page)
+                    break
+        print("sorted latest page --run_button_call: ", sorted_latest_pages)
+
+        '''Example latest page doc:  [{'key': '20200524160912397032-P', 'type': 'process', 'cluster': 'HSS', 'process': 'Custody', 'page': 'Geneva Trade Upload', 'pageindex': 0, 'steps': 'NA', 'outputstorein': 'NA'},
+         {'key': '20200526104904903894-P', 'type': 'process', 'cluster': 'HSS', 'process': 'Custody', 'page': 'Trade Repair', 'pageindex': 2, 'steps': 
+         [['new handle 2', 'Create New Action', "\n\tn1=100\n\tn2='test'\n\tn3=100.378\n\tn4=str()\n\tn5='done'", '\n\to1=str()\n\to2=str()', ''], ['new handle 6', 'new action 1', '\n\tn1=str()\n\tn2=100', "\n\to1=str()\n\to2='test'", '']], 'outputstorein': {}}]'''
+
+        pages=sorted_latest_pages
+        # derive function for module
+        module_function=self.derive_moduler_string(pages)
+        print("module function in --run_button_call: ",module_function)
+
+        output=sorted_latest_pages[0]["steps"][0][3]
+        print(output)
+
+        storein_value_dict={}
+
+        input=''
+        function_name=''
+
+        function = ''
+        func_call = ''
+        for each_page in pages:
+            page_name=each_page['page']
+            storein_value_dict[page_name]={}
+            storein_value_dict[page_name]['key1']='Test Storein Key'
+            print('storein_value_dict in --run_button_call: ', storein_value_dict)
+            row_num=0
+            active_loops = 0
+            loop_count = 0
+
+
+
+            for each_row in each_page['steps']:
+                zero_tab = ''
+                one_tab='\t'
+                two_tabs="\t\t"
+                three_tabs="\t\t\t"
+                handler = each_row[0]
+                loop_count+=1
+                row_num+=1
+                function_name="function_"+ str(loop_count)
+                outcome_name="outcome_"+ str(loop_count)
+
+                input = self.derive_input_string(each_row, storein_value_dict)
+                code = self.db.retrive_code_for_action(each_row[0], each_row[1])  # retrive code string
+                output_sorein_keys, output_name = self.derive_output_parameters(each_row)
+
+                #print('input string in --run_button_call', input)
+                #print('code string in --run_button_call', code)
+                #print('output_sorein_keys list in --run_button_call', output_sorein_keys)
+
+                if active_loops>0:
+                    for each in range(active_loops):
+                        zero_tab=zero_tab+ "\t"
+                        one_tab = one_tab + "\t"
+                        two_tabs = two_tabs + "\t"
+                        three_tabs = three_tabs + "\t"
+                if handler!="Loop Start":
+
+                    function= "\n"+ function   +"\n"+ "def " +function_name + "():"  + input   + code + "\n\t"+ "return " + output_name
+
+                    func_call="\n" + func_call+ "\n" +zero_tab+ "try:" + "\n" + one_tab  +"global " + outcome_name + "\n" + one_tab + outcome_name + "=" + function_name + "()" +"\n"+ one_tab + "loop_count=0" + "\n" + one_tab + "for each in output_sorein_keys" + ":" + "\n" + two_tabs + "if each !='' :" + "\n" + three_tabs + "storein_value_dict" + "["  + page_name + "]" + "[" + "each" + "]"    + "=" + outcome_name + "[loop_count]" + "\n" + two_tabs + "loop_count+=1" + "\n" + "except Exception as e:" + "\n" + one_tab + "Error: Error occured in page: " + page_name + " in row number: " + str(loop_count) + " as + str(e)"
+
+                if handler=="Loop Start":
+                    active_loops=+1
+                if handler == "Loop End":
+                    active_loops =-1
+                    input_list, input_name_list, input_value_list = self.format_input(each_row[2])
+                    loop_dataframe=input_value_list[0]
+                    func_call=func_call + "for index,row in " + loop_dataframe + ".iterrows:"
+
+                #print(function)
+                #print(func_call)
+
+                function_string= "\n" + module_function + "\n" + function + "\n" + func_call
+                print(function_string)
+
+        exec(function_string)
+
+
+
+
+
+        print('storein_value_dict in --run_button_call: ',storein_value_dict)
+
+        # create list for output, output name , output value and store in variable
+        output_list, output_name_list, output_value_list, storein_list = self.format_output(output)
+        print(output_list, output_name_list, output_value_list, storein_list)
+
+
+
+    def derive_output_parameters(self,row):
+        output_list, output_name_list, output_value_list, storein_list = self.format_output(row[3])
+        #ex: ['o1=&Geneva Trade Upload.key1&=str()', 'o2=&dummy&=str()'] ['o1', 'o2'] ['', ''] ['&Geneva Trade Upload.key1&', '']
+
+        storein_key=[]
+        for each in storein_list:
+            if "&" in each and "dummy" not in each and "." in each :
+                key=(each.replace("&","")).split(".")[1]
+                print(key)
+                storein_key.append(key)
+            else:
+                storein_key.append(each)
+
+            # Crate comma separated outputname string..Ex: o1,o2,o3
+        output_name = ''  # Create output name comma separated variable
+        loop_count = 1
+        for each in output_name_list:
+            if each != '' and loop_count > 1: output_name = output_name + ',' + each  # only add if output name is not an empty string and add comma if more bthan one output name found
+            if each != '' and loop_count == 1: output_name = each  # #only add if output name is not an empty string
+            loop_count += 1
+
+        return storein_key,output_name
+
+    def derive_input_string(self,row,storein_value_dict):
+        # create list for input, input name , input value
+        input_list, input_name_list, input_value_list = self.format_input(row[2])
+        print('printing input_value_list in --derive_input_string: ', input_value_list)
+        print('printing input_name_list in --derive_input_string: ', input_name_list)
+
+        # create a input string
+        input = ''  # Create input variable
+        loop_count = 0
+        for each_name in input_name_list:
+            storein_key = ""
+            if "&" in str(input_value_list[
+                              loop_count]):  # Find input value consist of & key - which indicate that input value taken from the storein key value
+                input_value = (input_value_list[loop_count]).replace('&','')
+                page_name=input_value.split('.')[0]
+                storein_key = input_value.split('.')[1]
+                # Stroe store in key
+                print(page_name)
+
+                print(storein_key)
+                # Create input string
+                # 1. storein dict is updated in runtime
+                # 2. get the value from storein dict and repplace
+                value=str(storein_value_dict[page_name][storein_key])
+                if value.isnumeric()!=True:
+                    value="'"+ value + "'"
+                input = "\n\t" + input + "\n\t" + each_name + "=" + value
+
+            elif str(input_value_list[loop_count])=="":
+                # create input string assign it value
+                input = input + "\n\t" + each_name + "=" + 'str()'
+
+            elif str(input_value_list[loop_count])!="":
+                # create input string assign it value
+                val=str(input_value_list[loop_count])
+                '''if str(val).isnumeric()!=True:
+                    val="'" +val + "'"'''
+                input = input + "\n\t" + each_name + "=" + val
+
+            loop_count += 1
+        #print('printing input in --derive_input_string: ', input)
+
+        return input
+
+    def derive_moduler_string(self,pages): # pages input is given as dictionaries in a list
+        module_function = ''
+        handler_list = []
+        for each_page in pages:
+            steps = each_page["steps"]
+            for each_row in steps:
+                handler = each_row[0]
+                if handler not in handler_list:
+                    handler_list.append(handler)
+                    # retrieve and format modules
+                    module_retrived = self.db.retrive_module_for_handler(handler)  # retruive module string
+                    if len(module_retrived) > 0:
+                        module_list = module_retrived.split('\n')  # create list by splitting "\n"
+                        # module = ''  # Create module string
+                        for each in module_list:
+                            if each != '' and each not in module_function:
+                                module_function = module_function + '\nimport ' + each  # add "import"  infront of each module and create module string
+        return module_function
+
+
+    #def derive_function_for_multipe_page(self):
+
+    def derive_processtab_widgets(self,ps_process_tab):
+        fr_config = (ps_process_tab.winfo_children())[0]
+        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+
+        return fr_config,fr_table
+
+
     def retrive_page(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
+        print("variables list for the widgets added in process table in --retrive_page: ", self.var_table)
+        self.var_table=[]
+
+        fr_config,fr_table=self.derive_processtab_widgets(ps_process_tab)
+
+        '''fr_config = (ps_process_tab.winfo_children())[0]
+        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]'''
+
+        children_windows_fr_tbl = fr_table.winfo_children()
+        for each in children_windows_fr_tbl:
+            each.destroy()
 
         # Store tha values for cluster, process, page and page index
         val_cluster, val_process, val_page, val_page_index = var_cluster.get(), var_process.get(), var_page.get(), var_page_index.get()
@@ -222,6 +447,8 @@ class ProcessStudioProcessTab:
             existing_pages_key.append(each_doc['key'])
         existing_pages_key.sort(reverse=True)
 
+        print("Key for sleected process in --retrive_page ",existing_pages_key)
+
         latest_page_doc_key=existing_pages_key[0]
         latest_page_doc=''
         for each_doc in existing_page_doc:
@@ -233,21 +460,26 @@ class ProcessStudioProcessTab:
         steps_latest_page_doc=latest_page_doc['steps'] #Store a list of rows. Ex:[[],[]]
         storein_latest_page_doc = latest_page_doc['outputstorein'] # Store the dictionary of output stare in. Ex: {"a": "", "b": ""}
 
-        var_page_index.set(page_index_latest_page_doc)
+        if page_index_latest_page_doc!=0:
+            var_page_index.set(page_index_latest_page_doc)
 
-        for each_row in steps_latest_page_doc:
-            self.add_row_button_call(self, ps_process_tab)
+        print("steps page doc in --retrive_page: ", steps_latest_page_doc)
+        if steps_latest_page_doc[0][0]!="NA":
+            for each_row in steps_latest_page_doc:
+                self.add_row_button_call(ps_process_tab)
 
+        if steps_latest_page_doc[0][0]!="NA":
+            loop_count=0
+            for each_row in range(len(steps_latest_page_doc)):
+                self.var_table[loop_count][0].set(steps_latest_page_doc[loop_count][0])
+                self.var_table[loop_count][1].set(steps_latest_page_doc[loop_count][1])
+                self.var_table[loop_count][2].set(steps_latest_page_doc[loop_count][2])
+                self.var_table[loop_count][3].set(steps_latest_page_doc[loop_count][3])
+                self.var_table[loop_count][4].set(steps_latest_page_doc[loop_count][4])
 
-        loop_count=0
-        for each_row in range(len(steps_latest_page_doc)):
-            self.var_table[loop_count][0].set(steps_latest_page_doc[loop_count][0])
-            self.var_table[loop_count][1].set(steps_latest_page_doc[loop_count][1])
-            self.var_table[loop_count][2].set(steps_latest_page_doc[loop_count][2])
-            self.var_table[loop_count][3].set(steps_latest_page_doc[loop_count][3])
-            self.var_table[loop_count][4].set(steps_latest_page_doc[loop_count][4])
+                loop_count+=1
 
-
+        print("variables list for the widgets added in process table in --retrive_page: ", self.var_table)
 
 
         '''if len(existing_page_doc)==0:
@@ -256,8 +488,8 @@ class ProcessStudioProcessTab:
         else:'''
 
 
-
     def save_document_button_call(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
+        #print("Dictionary of table values in ----save_document_button_call", output_table_values)
         ps_fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
         ps_fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
 
@@ -280,6 +512,8 @@ class ProcessStudioProcessTab:
             loop_count = 0 # Store loop count for each value in a row in an order as Handler/Input/Output/Action/Exception Handle
             for each_var in each_row:
                 loop_count+=1
+                print("var value in save button call for process: ",each_var.get())
+
                 # Show the error if the value is empty for the fields other than Exception Handle
                 if loop_count!=5 and each_var.get()=="":
                     messagebox.showerror("Error", "Value missing for Handler/Input/Output/Action in the row: " + str(row_num),parent=ps_fr_config)
@@ -319,11 +553,13 @@ class ProcessStudioProcessTab:
             latest'''
 
     def update_output_tab_on_page_change(self,var_page,var_process,var_cluster, ps_process_tab):
+        print("variables list for the widgets added in process table in --update_output_tab_on_page_change - start- : ",
+              self.var_table)
         # destoy all the chidren widgets in output tab
         self.output_tab_instance.destory_all_widgets_in_output_tab()
         # recreate all the widgets by calling output tab function
         self.output_tab_instance.output_tab(self.process_studio_output_tab)
-
+        print("variables list for the widgets added in process table in --update_output_tab_on_page_change: ", self.var_table)
     def trace_page_index(self,var_page_index, ps_process_tab):
         fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
@@ -440,6 +676,7 @@ class ProcessStudioProcessTab:
             self.process_tab_config_frame_gui(ps_process_tab, var_cluster_value, var_process_value, '')
 
     def create_new_page_om_call(self,var_page,var_process,var_cluster,ps_process_tab):
+        print("variables list for the widgets added in process table in --create_new_page_om_call: ", self.var_table)
         fr_config = (ps_process_tab.winfo_children())[0]
         fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
 
@@ -459,10 +696,6 @@ class ProcessStudioProcessTab:
 
         self.page_om_var_val = var_page.get()
 
-        children_windows_fr_tbl = fr_table.winfo_children()
-        for each in children_windows_fr_tbl:
-            each.destroy()
-
         children_windows=fr_config.winfo_children()
 
         var_page_value=var_page.get()
@@ -471,6 +704,12 @@ class ProcessStudioProcessTab:
 
 
         if var_page_value=="Create New Page":
+
+            children_windows_fr_tbl = fr_table.winfo_children()
+            for each in children_windows_fr_tbl:
+                each.destroy()
+
+
             loop_count=0
             for each in children_windows:
                 loop_count+=1
@@ -493,9 +732,11 @@ class ProcessStudioProcessTab:
                                                           val3=var_page_value :self.process_tab_config_frame_gui(fr,val1,val2,val3))
             bt_new_process_cancel.place(relx=0.85, rely=0.58, relwidth=0.07)
 
-        else:
+        '''else:
             # var_value = var.get()
-            self.process_tab_config_frame_gui(ps_process_tab, var_cluster_value, var_process_value, '')
+            self.process_tab_config_frame_gui(ps_process_tab, var_cluster_value , var_process_value, '')'''
+
+        print("variables list for the widgets added in process table in --create_new_page_om_call: ", self.var_table)
 
     def cluster_save_button_call(self,ent,fr,var):
         self.cluster_om_var_val = var.get()
@@ -562,7 +803,7 @@ class ProcessStudioProcessTab:
 
         if new_page_value not in page:
             self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=val_var_cluster,process=val_var_process,
-                                                               page=new_page_value,pageindex=0,steps="NA",outputstorein="NA")
+                                                               page=new_page_value,pageindex=1,steps=[["NA","NA","NA","NA","NA"]],outputstorein="NA")
 
             print('cluster updated')
             messagebox.showinfo("Success", 'Page created', parent=fr)
@@ -1433,14 +1674,14 @@ class ProcessStudioProcessTab:
 
         #create list for output, output name , output value and store in variable
         output_list, output_name_list, output_value_list, storein_list = self.format_output(row[3])
-
         # Crate comma separated outputname string..Ex: o1,o2,o3
-        output_name='' # Create output name comma separated variable
-        loop_count=1
+        output_name = ''  # Create output name comma separated variable
+        loop_count = 1
         for each in output_name_list:
-            if each !='' and loop_count>1:output_name=output_name + ',' + each #only add if output name is not an empty string and add comma if more bthan one output name found
-            if each != '' and loop_count == 1:output_name=each # #only add if output name is not an empty string
-            loop_count+=1
+            if each != '' and loop_count > 1: output_name = output_name + ',' + each  # only add if output name is not an empty string and add comma if more bthan one output name found
+            if each != '' and loop_count == 1: output_name = each  # #only add if output name is not an empty string
+            loop_count += 1
+
 
         # create list for input, input name , input value
         input_list, input_name_list, input_value_list = self.format_input(row[2])
@@ -1523,6 +1764,10 @@ class ProcessStudioProcessTab:
 
         except Exception as e:
             messagebox.showerror('Error','Error in running the step as: ' + str(e), parent=self.process_studio_notebook)
+
+
+
+
 
 
 class ProcessStudioOutputTab:

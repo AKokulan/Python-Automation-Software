@@ -189,7 +189,9 @@ class database:
     def retrive_module_for_handler(self,handler):
         query = Query() # create query
         action_doc = self.p_handler_table.search((query.type == "module") & (query.handler == handler)) # retrive document that matched the type handler
-        module = action_doc[0]['module'] # extrct module from document
+        module=[]
+        if len(action_doc)>0:
+            module = action_doc[0]['module'] # extrct module from document
         print('action doc in --retrive_code_for_action: ', action_doc)
         print('module in --retrive_code_for_action: ', module)
         return module # return module
@@ -222,7 +224,7 @@ class database:
         process_doc = self.p_process_table.search((query.cluster == cluster))
         process = ['Create New Process']
         for each in process_doc:
-            if each["process"] not in process: process.append(each["process"])
+            if each["process"] not in process and each["process"]!="NA": process.append(each["process"])
         print(process_doc)
         print(process)
         return process
@@ -232,7 +234,7 @@ class database:
         process_doc = self.p_process_table.search((query.process == process))
         page = ['Create New Page']
         for each in process_doc:
-            if each["page"] not in process: page.append(each["page"])
+            if each["page"] not in page and each["page"]!="NA": page.append(each["page"])
         print(process_doc)
         print(page)
         return page
@@ -240,6 +242,43 @@ class database:
     def retrive_process_page_doc(self,type,cluster,process,page):
         query = Query()
         process_doc = self.p_process_table.search((query.type == type) &(query.cluster == cluster) & (query.process == process) & (query.page == page))
+        return process_doc
+
+    def retrive_latest_page_for_page(self,type,cluster,process,page):
+        query = Query()
+        #retrive all the documents for the given page
+        page_doc = self.p_process_table.search((query.type == type) &(query.cluster == cluster) & (query.process == process) & (query.page == page))
+        existing_pages_key = [] # Create a list to store all the keys of the pages
+        for each_doc in page_doc:
+            existing_pages_key.append(each_doc['key']) # append the keys of the page documnts into existing_pages_key
+        existing_pages_key.sort(reverse=True) # sort the key list in desending order
+
+        latest_page_doc_key = existing_pages_key[0] # #take the first key in the list as the lates key
+
+        # check each page document and the key match in its, take that document and return
+        latest_page_doc = ''
+        for each_doc in page_doc:
+            if each_doc['key'] == latest_page_doc_key:
+                latest_page_doc = each_doc
+        print("latest page doc in --retrive_latest_page_for_page: ",latest_page_doc)
+         # order the pages in asending order based on index value
+        '''sorted_latest_pages=[]
+        for each in range(500):
+            for each_page in latest_page_doc:
+                print(each_page)
+                print(each_page['pageindex'])
+                if int(each_page['pageindex'])==each:
+                    sorted_latest_pages.append(each_page)
+                    break'''
+
+
+        return latest_page_doc
+
+
+    def retrive_all_pages_for_process(self,type,cluster,process):
+        query = Query()
+        process_doc = self.p_process_table.search(
+            (query.type == type) & (query.cluster == cluster) & (query.process == process))
         return process_doc
 
     def create_new_process_page_in_primary_databse(self,frame,key,type,cluster,process,page,pageindex,steps,outputstorein):
