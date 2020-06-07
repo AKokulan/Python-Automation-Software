@@ -1,5 +1,6 @@
 from tinydb import TinyDB, Query
 from tkinter import messagebox
+from datetime import datetime
 class database:
 
     def __init__(self,Primarydatabase,SecondaryDatabase):
@@ -13,6 +14,31 @@ class database:
         self.s_handler_table=self.s_db.table('HandlerStudio')
         self.s_process_table = self.s_db.table('ProcessStudio')
 
+
+     #database acces for handlerstudio
+
+    def create_new_handle(self,frame,handler,action,module,input,output,code):
+
+        # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+        now = datetime.utcnow() # Strore UTC time now
+        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+            "%M") + now.strftime("%S") + now.strftime("%f") + "-P"
+        try:
+            query = Query() #create query object
+            action_doc = self.p_handler_table.search((query.handler == handler) & (query.action == action)) #retrive action document
+
+            # if handler and action already exist, throw an exception
+            if len(action_doc) > 0:
+                messagebox.showerror('Error', "Handler with action already exist", parent=frame)
+
+            #if no handler is already there in db, create a new handler action
+            else:
+                self.p_handler_table.insert({'key':key,'type':'action' ,'handler': handler,'action':action,'module':module , 'input':input,'output':output,'code':code})
+                messagebox.showinfo("Success", "New handler-action Created", parent=frame)
+        except Exception as e:
+            messagebox.showerror("Error", "Error in creating handler-action as: " + str(e), parent=frame)
+
+#--------------------------------------------------------------------------------------------------------------------
     def create_new_handler_action_in_primary_databse(self,frame,handler,module,action,input,output,code):
         try:
         #primary database
