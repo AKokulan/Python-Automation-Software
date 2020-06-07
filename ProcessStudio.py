@@ -257,6 +257,8 @@ class ProcessStudioProcessTab:
 
         function = ''
         func_call = ''
+        loop_count = 0
+        keys_dict={}
         for each_page in pages:
             page_name=each_page['page']
             storein_value_dict[page_name]={}
@@ -264,7 +266,7 @@ class ProcessStudioProcessTab:
             print('storein_value_dict in --run_button_call: ', storein_value_dict)
             row_num=0
             active_loops = 0
-            loop_count = 0
+
 
 
 
@@ -278,10 +280,16 @@ class ProcessStudioProcessTab:
                 row_num+=1
                 function_name="function_"+ str(loop_count)
                 outcome_name="outcome_"+ str(loop_count)
+                storein_key="sorein_key_list_"+ str(loop_count)
 
                 input = self.derive_input_string(each_row, storein_value_dict)
                 code = self.db.retrive_code_for_action(each_row[0], each_row[1])  # retrive code string
                 output_sorein_keys, output_name = self.derive_output_parameters(each_row)
+
+                keys_dict[loop_count]=keys_dict
+                print("output_sorein_keys: ",output_sorein_keys)
+                print("key dictionary in run button call: ",keys_dict)
+
 
                 #print('input string in --run_button_call', input)
                 #print('code string in --run_button_call', code)
@@ -297,7 +305,7 @@ class ProcessStudioProcessTab:
 
                     function= "\n"+ function   +"\n"+ "def " +function_name + "():"  + input   + code + "\n\t"+ "return " + output_name
 
-                    func_call="\n" + func_call+ "\n" +zero_tab+ "try:" + "\n" + one_tab  +"global " + outcome_name + "\n" + one_tab + outcome_name + "=" + function_name + "()" +"\n"+ one_tab + "loop_count=0" + "\n" + one_tab + "for each in output_sorein_keys" + ":" + "\n" + two_tabs + "if each !='' :" + "\n" + three_tabs + "storein_value_dict" + "["  + page_name + "]" + "[" + "each" + "]"    + "=" + outcome_name + "[loop_count]" + "\n" + two_tabs + "loop_count+=1" + "\n" + "except Exception as e:" + "\n" + one_tab + "Error: Error occured in page: " + page_name + " in row number: " + str(loop_count) + " as + str(e)"
+                    func_call="\n" + func_call+ "\n" + "storein_key" + "=" + str( keys_dict[loop_count]) + "\n" +zero_tab+ "try:" + "\n" + one_tab  +"global " + outcome_name + "\n" + one_tab + outcome_name + "=" + function_name + "()" + "\n" + one_tab + "print("+ " '" + outcome_name  +": ' " + "," + outcome_name + ")"  +"\n"+ one_tab + "loop_count=0" + "\n" + one_tab + "for each in storein_key" + ":" + "\n" + two_tabs + "if each !='' :" + "\n" + three_tabs + "storein_value_dict" + "['"  + page_name + "']" + "[" + "each" + "]"    + "=" + outcome_name +  "[loop_count]"  + "\n" + two_tabs + "loop_count+=1" + "\n" + "except Exception as e:" + "\n" + one_tab +   ' error=' + " ' "  + 'Error: Error occured in page:  ' + page_name + "  in row number:  " + str(loop_count) + " as: " + " ' " + "+ str(e)"
 
                 if handler=="Loop Start":
                     active_loops=+1
@@ -313,7 +321,11 @@ class ProcessStudioProcessTab:
                 function_string= "\n" + module_function + "\n" + function + "\n" + func_call
                 print(function_string)
 
+        print(keys_dict)
         exec(function_string)
+        #print(outcome_1)
+        #print(outcome_2)
+        #print(storein_value_dict)
 
 
 
@@ -322,8 +334,8 @@ class ProcessStudioProcessTab:
         print('storein_value_dict in --run_button_call: ',storein_value_dict)
 
         # create list for output, output name , output value and store in variable
-        output_list, output_name_list, output_value_list, storein_list = self.format_output(output)
-        print(output_list, output_name_list, output_value_list, storein_list)
+       # output_list, output_name_list, output_value_list, storein_list = self.format_output(output)
+        #print(output_list, output_name_list, output_value_list, storein_list)
 
 
 

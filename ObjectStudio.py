@@ -1370,7 +1370,7 @@ class MainWindow:
         self.studio_window = Toplevel(self.root)
         self.studio_window.title('New Window')
         #newwin.geometry("200x100")
-        #newwin.resizable(0, 0)
+        #newwin.resizable(0, 0)`
         self.studio_window.state('zoomed')
 
         style = ttk.Style(self.studio_window)
