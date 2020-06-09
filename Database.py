@@ -17,7 +17,7 @@ class database:
 
      #database acces for handlerstudio
 
-    def create_new_handle(self,frame,handler,action,module,input,output,code):
+    def create_new_handle(self,handler,action,module,input,output,code):
 
         # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
         now = datetime.utcnow() # Strore UTC time now
@@ -29,14 +29,66 @@ class database:
 
             # if handler and action already exist, throw an exception
             if len(action_doc) > 0:
-                messagebox.showerror('Error', "Handler with action already exist", parent=frame)
+                return 'Error',"Handler with action already exist"
 
             #if no handler is already there in db, create a new handler action
             else:
                 self.p_handler_table.insert({'key':key,'type':'action' ,'handler': handler,'action':action,'module':module , 'input':input,'output':output,'code':code})
-                messagebox.showinfo("Success", "New handler-action Created", parent=frame)
+                return 'Success',"New handler-action Created"
         except Exception as e:
-            messagebox.showerror("Error", "Error in creating handler-action as: " + str(e), parent=frame)
+            return 'Error',"Error in creating handler-action as: " + str(e)
+
+    def update_action(self,handler,action,module,input,output,code):
+
+        # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+        now = datetime.utcnow() # Strore UTC time now
+        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+            "%M") + now.strftime("%S") + now.strftime("%f") + "-P"
+        try:
+            query = Query() #create query object
+            action_doc = self.p_handler_table.search((query.handler == handler) & (query.action == action)) #retrive action document
+
+            # if handler and action already exist, throw an exception
+            if len(action_doc) > 0:
+                self.p_handler_table.insert({'key':key,'type':'action' ,'handler': handler,'action':action,'module':module , 'input':input,'output':output,'code':code})
+                return 'Success',"Action updated"
+        except Exception as e:
+            return 'Error',"Error in updating handler-action as: " + str(e)
+
+    def retrive_all_handles(self):
+        query = Query()
+        action_doc = self.p_handler_table.search(query.type == "action")
+        handles=['Create New Handle']
+        for each in action_doc:
+            if each["handler"] not in handles:handles.append(each["handler"])
+        return handles
+
+    def retrive_actions_for_handle(self,handler):
+        query = Query()
+        action_doc = self.p_handler_table.search((query.type == "action") & (query.handler == handler))
+        actions = ['Create New Action']
+        for each in action_doc:
+            if each["action"] not in actions: actions.append(each["action"])
+        return actions
+
+    def retrive_latest_action_doc(self,handler,action):
+        query = Query()
+        action_doc = self.p_handler_table.search((query.type == "action") & (query.handler == handler) & (query.action == action))
+        #print(action_doc)
+
+        key_list = []  # Create a list to store all the keys of the actions
+        for each_doc in action_doc:
+            key_list.append(each_doc['key'])  # append the keys of the actions documnts into key_list
+        key_list.sort(reverse=True)  # sort the key list in desending order
+        #print(key_list)
+
+        key = key_list[0]  # #take the first key in the list as the lates key
+
+        latest_action_doc = self.p_handler_table.search((query.type == "action")& (query.handler == handler) &
+                                                        (query.action == action)& (query.key == key))
+
+        return latest_action_doc
+
 
 #--------------------------------------------------------------------------------------------------------------------
     def create_new_handler_action_in_primary_databse(self,frame,handler,module,action,input,output,code):
@@ -162,7 +214,7 @@ class database:
         return module, input_name, input_value, output_name, output_value, code
 
 
-    def retrive_all_handles(self):
+    def retrive_all_handles1(self):
         query = Query()
         action_doc = self.p_handler_table.search(query.type == "action")
         handles=['Create New Handle']
@@ -339,11 +391,3 @@ class database:
 
 
 
-db=database(r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json",r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomSecondaryDatabase.json")
-#print(db.db)
-#db.create_new_handler_action_in_primary_databse("frame","test_handler5","os","test_action23","test_input","test_output","test_code")
-#db.create_new_handler_action_in_secondary_databse("frame","test_handler5","os","test_action23","test_input","test_output","test_code")
-#db.retrive_action_document_from_primary_databse('frame',"test_handler5","test_action23")
-db.retrive_action_document_from_primary_databse("","test_handler5",'open website')
-#x=db.retrive_clusters()
-#print(x)

@@ -12,9 +12,10 @@ import ProcessStudio
 
 class MainWindow:
 
-    def __init__(self, db):
+    def __init__(self, primary_db,secondary_db):
         self.num_rows = 4
-        self.database = db
+        self.primary_db = primary_db
+        self.secondary_db = secondary_db
         self.studio_window = ''
         self.root=''
 
@@ -87,8 +88,7 @@ class MainWindow:
 
         #self.object_studio(object_studio_notebook)'''
 
-
-class HandlerStudio:
+class HandlerStudio(MainWindow):
 
     def __init__(self,handler_studio_notebook):
         self.x=100
@@ -115,7 +115,7 @@ class HandlerStudio:
                                 'AddTableRowButton': '', 'DelTableRowButton': '', 'ValidateTableRowButton': ''}
 
         # create a dictionary of widgets in output tab
-        self.code_wids_dict={'CodeTextbox':'','DebugButton':'','RunButton':'','SaveButton':''}
+        self.code_wids_dict={'CodeTextbox':'','CodeTextVar':'' , 'DebugButton':'','RunButton':'','SaveButton':''}
 
     def handler_studio(self):
         # Make the  tab
@@ -145,6 +145,9 @@ class Module(HandlerStudio):
         super().__init__(handler_studio_notebook)
         self.row_num_in_module_tbl=1
         print("x is : ",self.x)
+        primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        self.db_m = Database.database(primary_db, secondary_db)
 
     def module_tab_gui(self):
         hs_tab_wids_dict=self.hs_tab_wids_dict # store tabs widgets inherited from HandlerStudio Class
@@ -205,7 +208,8 @@ class Module(HandlerStudio):
 
         # create option menue for handles on parameter5 frame
         handle_var = StringVar(fr_parameter)
-        choices = ["Create New Handle",'#NA']
+        #choices = ["Create New Handle",'#NA']
+        choices = self.db_m.retrive_all_handles()
         handle_option_menus = OptionMenu(fr_parameter, handle_var, *choices)
         handle_option_menus.configure(bg='snow')
         handle_option_menus.place(relx=0.25, rely=0.15,relwidth=0.5)
@@ -279,44 +283,15 @@ class Module(HandlerStudio):
     def module_validate_button_call(self):
         # store table widgets
         frame = self.module_wids_dict['TableFrame']
-
-        #creare list to store module name, path and validation error
-        text_list,modue_name_list,module_path_list,validation_error_list=list(),list(),list(),list()
-
-        loop_count=0
-        children_widgets = frame.winfo_children() #store all the widgets in the frame(widgets include header labels and entry wwidgets)
-
-        # Loop widgets in table frame and the widget is entry, get the value to append in module name and path list
-        for child_widget in children_widgets:
-            loop_count+=1
-            if child_widget.winfo_class() == 'Entry':
-                text=child_widget.get() # get the value from entry box
-                if loop_count%2!=0 and len(text)>0:modue_name_list.append(text) # if the entry widget in odd position, it is a module name
-                if loop_count % 2 == 0 and len(text)>0: module_path_list.append(text) # if the entry widget in even position, it is a module name
-                #if len(text)>0:text_list.append(text)
-
-        # validation for module path will be used in future. Find the validation
-        '''if len(module_path_list)>len(modue_name_list):validation_error_list.append("Module name missing for a given module path")
-        for each in module_path_list:
-            if os.path.exists(each)==False:validation_error_list.append("Module path not exist: " + each )
-        if len(validation_error_list)>0:messagebox.showerror("Error",validation_error_list,parent=frame)'''
-
-        # validate module name and if the module is not available , add it to validation_error_list
-        for each in modue_name_list:
-            script = "try:\n\timport " + each + "\nexcept:\n\tvalidation_error_list.append(each)"
-            #below code depreciated
-            #script="try:\n\timport " + each  + "\n\tmessagebox.showinfo('Success','All modules successfuly validated',parent=frame)" +"\nexcept:\n\tmessagebox.showerror('Error'," + "'"+ "Module is not available: " + each + "'," + "parent=frame)  "
-            exec(script)
-
-        #show the error if there error in validation_error_list, else show succes message
-        if len(validation_error_list)>0:
-            messagebox.showerror("Error","Moduels are not available: " + ','.join(validation_error_list),parent=frame )
-            return "Error","Moduels are not available: " + ','.join(validation_error_list)
+        # call validate module table function
+        result,error_list=self.validate_module_table()
+        if result=='Error':
+            messagebox.showerror("Error", "Moduels are not available: " + ','.join(error_list), parent=frame)
         else:
-            messagebox.showinfo('Success','All modules successfuly validated',parent=frame)
+            messagebox.showinfo('Success', 'All modules successfuly validated', parent=frame)
 
     def module_handle_refresh_call(self):
-
+        self.db_m = Database.database(primary_db, secondary_db)
         parameter_frame=self.module_wids_dict['ParameterFrame']
         handle_var = self.module_wids_dict['HandleVar']
         #value=handle_var.get()
@@ -371,10 +346,11 @@ class Module(HandlerStudio):
 
             #create action option menu
             action_value_var = StringVar(parameter_frame)
-            action_choices = ["Create New Action",'#NA']
+            action_choices = self.db_m.retrive_actions_for_handle(option_value)
             action_menu = OptionMenu(parameter_frame, action_value_var, *action_choices)
             action_menu.configure(bg='snow')
-            action_menu.place(relx=0.25, rely=0.45,relheight=.24, relwidth=0.5)
+            #action_menu.place(relx=0.25, rely=0.45,relheight=.24, relwidth=0.5)
+            action_menu.place(relx=0.25, rely=0.45, relwidth=0.5)
             self.module_wids_dict['ActionOptionMenu'] = action_menu
             self.module_wids_dict['ActionVar'] = action_value_var
 
@@ -385,14 +361,16 @@ class Module(HandlerStudio):
         self.clear_table()
 
     def module_action_refresh_call(self):
-
+        self.db_m = Database.database(primary_db, secondary_db)
         #store widgets in module
         parameter_frame = self.module_wids_dict['ParameterFrame']
         action_var = self.module_wids_dict['ActionVar']
-        option_value = action_var.get()
+        handle_var = self.module_wids_dict['HandleVar']
+        action_value = action_var.get()
+        handle_value=handle_var.get()
 
         # perform below activity if the action is 'Create New Action'
-        if option_value == 'Create New Action':
+        if action_value == 'Create New Action':
 
             #create new action label
             new_action_label = Label(parameter_frame, text="New Action:", font=("Arial Bold", 9))
@@ -403,6 +381,7 @@ class Module(HandlerStudio):
             new_action_entry = Entry(parameter_frame)
             new_action_entry.place(relx=0.25, rely=0.74,  relwidth=0.5)
             self.module_wids_dict['NewActionEntry'] = new_action_entry
+            self.clear_table()
 
         # destory NewActionLabel and NewActionEntry widgets , if the other value is selected in action
         else:
@@ -411,7 +390,57 @@ class Module(HandlerStudio):
             if self.module_wids_dict['NewActionEntry'] != '': self.module_wids_dict['NewActionEntry'].destroy()
             self.module_wids_dict['NewActionEntry'] = ''
 
-        self.clear_table()
+            self.clear_table()
+
+            self.load_action_document_in_tabs(handle_value,action_value)
+
+    def validate_module_table(self):
+        # store table widgets
+        frame = self.module_wids_dict['TableFrame']
+
+        # creare list to store module name, path and validation error
+        text_list, modue_name_list, module_path_list, validation_error_list = list(), list(), list(), list()
+
+        loop_count = 0
+        children_widgets = frame.winfo_children()  # store all the widgets in the frame(widgets include header labels and entry wwidgets)
+
+        # Loop widgets in table frame and the widget is entry, get the value to append in module name and path list
+        for child_widget in children_widgets:
+            loop_count += 1
+            if child_widget.winfo_class() == 'Entry':
+                text = child_widget.get()  # get the value from entry box
+                if loop_count % 2 != 0 : modue_name_list.append(text)  # if the entry widget in odd position, it is a module name
+                if loop_count % 2 == 0 and len(text) > 0: module_path_list.append(
+                    text)  # if the entry widget in even position, it is a module name
+                # if len(text)>0:text_list.append(text)
+
+        # validation for module path will be used in future. Find the validation
+        '''if len(module_path_list)>len(modue_name_list):validation_error_list.append("Module name missing for a given module path")
+        for each in module_path_list:
+            if os.path.exists(each)==False:validation_error_list.append("Module path not exist: " + each )
+        if len(validation_error_list)>0:messagebox.showerror("Error",validation_error_list,parent=frame)'''
+
+        # validate module name and if the module is not available , add it to validation_error_list
+        for each in modue_name_list:
+            if each=='':
+                validation_error_list.append('Blank Rows in Module Name')
+                return 'Error', ", ".join(validation_error_list)
+
+            else:
+                script = "try:\n\timport " + each + "\nexcept Exception as e:\n\tvalidation_error_list.append('Module Tab: ' + str(e))"
+            # below code depreciated
+            # script="try:\n\timport " + each  + "\n\tmessagebox.showinfo('Success','All modules successfuly validated',parent=frame)" +"\nexcept:\n\tmessagebox.showerror('Error'," + "'"+ "Module is not available: " + each + "'," + "parent=frame)  "
+            exec(script)
+
+        # show the error if there error in validation_error_list, else show succes message
+        if len(validation_error_list) > 0:
+            #return 'Error',validation_error_list
+            return 'Error', ", ".join(validation_error_list)
+
+        else:
+
+            #return 'Success',validation_error_list
+            return 'Success', ", ".join(validation_error_list)
 
     def clear_table(self):
         #get widgets
@@ -454,6 +483,98 @@ class Module(HandlerStudio):
 
         #clear code text box
         code_textbox.delete('1.0', END)
+
+    def load_action_document_in_tabs(self,handler,action):
+        #self.db_m = Database.database(primary_db, secondary_db)
+        action_doc=self.db_m.retrive_latest_action_doc(handler,action)
+        print('action_doc in --load_action_document_in_tabs: ', action_doc)
+
+        module_table=self.module_wids_dict['TableFrame']
+        input_table=self.input_wids_dict['TableFrame']
+        output_table=self.output_wids_dict['TableFrame']
+        code_textbox = self.code_wids_dict['CodeTextbox']
+        #code_text_var = self.code_wids_dict['CodeTextVar']
+
+        child_m_table=module_table.winfo_children()#children widows in tmodule table
+        child_i_table=input_table.winfo_children()#children widows in input table
+        child_o_table = output_table.winfo_children()  # children widows in output table
+
+        #dleete all entry widgets in module table
+        for each in child_m_table:
+            if each.winfo_class() == 'Entry':
+                each.destroy()
+
+        # dleete all entry widgets in input table
+        for each in child_i_table:
+            if each.winfo_class() != 'Label':
+                each.destroy()
+
+        # dleete all entry widgets in output table
+        for each in child_o_table:
+            if each.winfo_class() != 'Label':
+                each.destroy()
+
+        # clear code textbox
+        code_textbox.delete('1.0',END)
+
+
+        #add rows in module table
+        module_dict=action_doc[0]['module']
+        row=2
+        for each in module_dict:
+            name_var=StringVar()
+            name=Entry(module_table, width=40,textvariable=name_var)
+            name_var.set(module_dict[each]['ModuleName'])
+            name.grid(column=0, row=row, sticky=NW)
+
+            path_var = StringVar()
+            path=Entry(module_table, width=59,textvariable=path_var)
+            path_var.set(module_dict[each]['ModulePath'])
+            path.grid(column=1, row=row, sticky=NW, columnspan=10)
+            row+=1
+
+        # add rows in input table
+        input_dict = action_doc[0]['input']
+        row = 2
+        for each in input_dict:
+            name_var = StringVar()
+            name = Entry(input_table, width=40, textvariable=name_var)
+            name_var.set(input_dict[each]['InputName'])
+            name.grid(column=0, row=row, sticky=NW)
+
+            val_var = StringVar()
+            value = Entry(input_table, width=59, textvariable=val_var)
+            val_var.set(input_dict[each]['InputValue'])
+            value.grid(column=1, row=row, sticky=NW, columnspan=10)
+            row += 1
+
+        # add rows in output table
+        output_dict = action_doc[0]['output']
+        row = 2
+        for each in output_dict:
+            name_var = StringVar()
+            name = Entry(output_table, width=40, textvariable=name_var)
+            name_var.set(output_dict[each]['OutputName'])
+            name.grid(column=0, row=row, sticky=NW)
+
+            val_var = StringVar()
+            value = Entry(output_table, width=59, textvariable=val_var)
+            val_var.set(output_dict[each]['OutputValue'])
+            value.grid(column=1, row=row, sticky=NW, columnspan=10)
+            row += 1
+
+        # add rows in code textbox
+        code_text=''
+        code_dict = action_doc[0]['code']
+        row=1
+        for each in code_dict:
+            if row==1:
+                code_text=code_dict[each]
+            else:
+                code_text=code_text+ '\n'  + code_dict[each]
+            row+=1
+        code_textbox.insert('insert',code_text)
+
 
 class Input(Module):
 
@@ -628,6 +749,15 @@ class Input(Module):
     def input_validate_button_call(self):
         frame = self.input_wids_dict['TableFrame']
 
+        #call validate input table function
+        result,error_list=self.validate_input_table()
+        if result=='Error':
+            messagebox.showerror('Error', message='Input' + " tab: " + error_list, parent=frame)
+        else:
+            messagebox.showinfo('Success', message='Input' + " tab: " + "Successfully validated", parent=frame)
+
+    def validate_input_table(self):
+        frame = self.input_wids_dict['TableFrame']
         #create list to store input name value and validation error
         text_list,input_name_list,input_value_list,validation_error_list = list(),list(),list(),list()
 
@@ -639,8 +769,8 @@ class Input(Module):
             if child_widget.winfo_class() == 'Entry':
                 loop_count += 1
                 text = child_widget.get()
-                if loop_count % 2 != 0 and len(text) >= 0: input_name_list.append(text) # name widgets is in odd position of the entry widgets
-                if loop_count % 2 == 0 and len(text) >= 0: input_value_list.append(text) # value widgets is in even position of the entry widgets
+                if loop_count % 2 != 0 : input_name_list.append(text) # name widgets is in odd position of the entry widgets
+                if loop_count % 2 == 0 : input_value_list.append(text) # value widgets is in even position of the entry widgets
                 if len(text) > 0: text_list.append(text)
 
         # Loop all the values and if any error found , store it in validation_error_list
@@ -672,10 +802,10 @@ class Input(Module):
 
         # check the errors in validation_error_list and show the message
         if len(validation_error_list)>0:
-            messagebox.showerror('Error', message='Input' +" tab: "+ ", ".join(validation_error_list), parent=frame)
+            return 'Error',", ".join(validation_error_list)
         else:
-            messagebox.showinfo('Success', message='Input' +" tab: "+"Successfully validated", parent=frame)
-        return validation_error_list
+            return 'Success',", ".join(validation_error_list)
+
 
 class Output(Input):
 
@@ -845,63 +975,77 @@ class Output(Input):
             string = "messagebox.showerror('Input Value',message=error,parent=frame)" # show the message if the eveluvation is with error
             exec(string)
 
-
     def output_validate_button_call(self):
         frame = self.output_wids_dict['TableFrame']
 
-        #create list to store output name value and validation error
-        text_list,output_name_list,output_value_list,validation_error_list = list(),list(),list(),list()
+        #call validate output table function
+        result,error_list=self.validate_output_table()
+        if result=='Error':
+            messagebox.showerror('Error', message='Output' + " tab: " + error_list, parent=frame)
+        else:
+            messagebox.showinfo('Success', message='Output' + " tab: " + "Successfully validated", parent=frame)
+
+    def validate_output_table(self):
+        frame = self.output_wids_dict['TableFrame']
+
+        # create list to store output name value and validation error
+        text_list, output_name_list, output_value_list, validation_error_list = list(), list(), list(), list()
 
         loop_count = 0
         children_widgets = frame.winfo_children()
 
-        #loop all the widgets in table and store the name and value entry widgets
+        # loop all the widgets in table and store the name and value entry widgets
         for child_widget in children_widgets:
             if child_widget.winfo_class() == 'Entry':
                 loop_count += 1
                 text = child_widget.get()
-                if loop_count % 2 != 0 and len(text) >= 0: output_name_list.append(text) # name widgets is in odd position of the entry widgets
-                if loop_count % 2 == 0 and len(text) >= 0: output_value_list.append(text) # value widgets is in even position of the entry widgets
+                if loop_count % 2 != 0 and len(text) >= 0: output_name_list.append(
+                    text)  # name widgets is in odd position of the entry widgets
+                if loop_count % 2 == 0 and len(text) >= 0: output_value_list.append(
+                    text)  # value widgets is in even position of the entry widgets
                 if len(text) > 0: text_list.append(text)
 
         # Loop all the values and if any error found , store it in validation_error_list
         for each in output_value_list:
             try:
-                text=str(each)
-                if len(each)>0:
+                text = str(each)
+                if len(each) > 0:
                     value = str(eval(text))
-                    code="value = str(eval(text))"
+                    code = "value = str(eval(text))"
                     exec(code)
             except Exception as e:
                 error = "Error: " + str(e)
                 validation_error_list.append(error)
 
-
         # validate input name
-        loop_count=0
+        loop_count = 0
         for each in output_name_list:
-            loop_count+=1
+            loop_count += 1
             # check name is missing in any row
-            if len(each)==0:
-                validation_error_list.append('Output' + ' name Missing in line: ' + str(loop_count) )
+            if len(each) == 0:
+                validation_error_list.append('Output' + ' name Missing in line: ' + str(loop_count))
 
             # check any name is duplicated
             if output_name_list.count(each) > 1:
-                validation_error_list.append('Output' + " name Duplicated in line "+ str(loop_count))
-                #messagebox.showinfo('Error', message="Input/Output Name Duplicated: "+each, parent=frame)
-                #break
+                validation_error_list.append('Output' + " name Duplicated in line " + str(loop_count))
+                # messagebox.showinfo('Error', message="Input/Output Name Duplicated: "+each, parent=frame)
+                # break
 
         # check the errors in validation_error_list and show the message
-        if len(validation_error_list)>0:
-            messagebox.showerror('Error', message='Output' +" tab: "+ ", ".join(validation_error_list), parent=frame)
+        if len(validation_error_list) > 0:
+            return 'Error',", ".join(validation_error_list)
         else:
-            messagebox.showinfo('Success', message='Output' +" tab: "+"Successfully validated", parent=frame)
-        return validation_error_list
+            return 'Success', ", ".join(validation_error_list)
+
 
 class Code(Output):
 
     def __init__(self,handler_studio_notebook):
         super().__init__(handler_studio_notebook)
+        #self.db=self.database
+        primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        db = Database.database(primary_db, secondary_db)
 
     def code_tab_gui(self):
         hs_tab_wids_dict=self.hs_tab_wids_dict # store tabs widgets inherited from HandlerStudio Class
@@ -912,7 +1056,7 @@ class Code(Output):
         main_frame.place(relx=0.15, rely=0.1, height=500, width=800)
 
         #create text box
-        txt = scrolledtext.ScrolledText(main_frame, undo=True)
+        txt = scrolledtext.ScrolledText(main_frame, undo=True,)
         txt['font'] = ('consolas', '12')
         txt.place(relx=.005, rely=.05, relheight=.9, relwidth=.9)
 
@@ -925,91 +1069,27 @@ class Code(Output):
         run_button.place(relx=.913, rely=.16)
 
         # create save button
-        save_button = Button(main_frame, text="Save", width=7,command=lambda: self.os_code_save_button_call())
+        save_button = Button(main_frame, text="Save", width=7,command=lambda: self.code_save_button_call())
         save_button.place(relx=.913, rely=.22)
 
         #sore widgets in code widgets dictionary
-        self.code_wids_dict = {'CodeTextbox': txt, 'DebugButton': debug_button, 'RunButton': run_button, 'SaveButton': save_button}
+        self.code_wids_dict = {'CodeTextbox': txt,'DebugButton': debug_button, 'RunButton': run_button, 'SaveButton': save_button}
 
     def code_debug_button_call(self):
         self.module_validate_button_call()
         self.input_validate_button_call()
         self.output_validate_button_call()
 
-    def code_run_button_call1(self,text_obj,object_studio_module_tab,object_studio_input_tab,object_studio_output_tab):
-        code = text_obj.get('1.0', END)
-
-        table_frame_os_module_tab = (((object_studio_module_tab.winfo_children()[0]).winfo_children()[0]).winfo_children()[0])
-        table_frame_os_input_tab = (((object_studio_input_tab.winfo_children()[0]).winfo_children()[0]).winfo_children()[0])
-        table_frame_os_output_tab = (((object_studio_output_tab.winfo_children()[0]).winfo_children()[0]).winfo_children()[0])
-
-
-        #read and format modules into a list
-        childs_table_frame_os_module_tab=table_frame_os_module_tab.winfo_children()
-        loop_count=0
-        module_list=list()
-        for each_widget in childs_table_frame_os_module_tab:
-            if each_widget.winfo_class()=='Entry' :
-                loop_count += 1
-                if len(each_widget.get())>0 and  loop_count%2!=0:
-                    module_list.append('import ' + each_widget.get() + '\n')
-
-        #read and format input name and value into a list
-        input_name_list,input_value_list,input_list=list(),list(),list()
-        loop_count =0
-        childs_table_frame_os_input_tab = table_frame_os_input_tab.winfo_children()
-        for each_widget in childs_table_frame_os_input_tab:
-            if each_widget.winfo_class()=='Entry':
-                loop_count += 1
-                if loop_count%2!=0:input_name_list.append('\t' + each_widget.get() + '=')
-                if loop_count % 2 == 0 and len(each_widget.get())>0:input_value_list.append(each_widget.get() + '\n')
-                if loop_count % 2 == 0 and len(each_widget.get())==0:input_value_list.append("str()\n")
-        for each_item in range(len(input_name_list)):input_list.append(input_name_list[each_item]+input_value_list[each_item])
-
-        #read and format output name and value into a list
-        output_name_list,output_value_list,output_list=list(),list(),list()
-        loop_count =0
-        childs_table_frame_os_output_tab = table_frame_os_output_tab.winfo_children()
-        for each_widget in childs_table_frame_os_output_tab:
-            if each_widget.winfo_class()=='Entry':
-                loop_count += 1
-                if loop_count%2!=0:output_name_list.append('\t' +each_widget.get() + '=')
-                if loop_count % 2 == 0 and len(each_widget.get())>0:output_value_list.append(each_widget.get() + '\n')
-                if loop_count % 2 == 0 and len(each_widget.get())==0:output_value_list.append("str()\n")
-        for each_item in range(len(output_name_list)):output_list.append(output_name_list[each_item]+output_value_list[each_item])
-
-
-        #derive finction and execute
-        outcome_dict={}
-        output=((','.join(output_name_list)).replace("=","")).strip()
-        print(output)
-        function = ''.join(module_list) + "def action():\n"  +  ''.join(input_list) +  ''.join(output_list) + "\n" + code + "\n\t" + "return " + output +  "\n" + "global outcome" + "\n" + "outcome=action()" + "\n" + "print(outcome)"
-        print(function)
-        try:
-            exec(function)
-            #output_value_list=outcome.split(",")
-            output_key_list=output.split(",")
-
-
-
-            if "tuple" in str(outcome):
-                loop_count = 0
-                for each in output_key_list:
-                    outcome_dict[each.strip()] = outcome[loop_count]
-                    loop_count += 1
-            else:
-                for each in output_key_list:outcome_dict[each.strip()] = outcome
-
-
-            print(outcome_dict)
-            messagebox.showinfo("Output",outcome_dict,parent=table_frame_os_module_tab)
-        except Exception as e:
-            error="Error in run as: " + str(e)
-            messagebox.showinfo("Error",  error , parent=table_frame_os_module_tab)
-
     def code_run_button_call(self):
         hs_tab_wids_dict = self.hs_tab_wids_dict  # store tabs widgets inherited from HandlerStudio Class
         code_tab = hs_tab_wids_dict['CodeTab']  # store code tab widget
+        # store table widgets
+
+        error_list=self.validate_all_tables()
+        if len(''.join(error_list))>0:
+            messagebox.showerror('Error', message= ','.join(error_list), parent=code_tab)
+            return
+
 
         # import all table dictionaries
         module_table_dict=self.create_module_table_dict()
@@ -1074,6 +1154,21 @@ class Code(Output):
 
         #excute script
         exec(script)
+
+    def validate_all_tables(self):
+        #call all validate table function
+        result_module,error_list_module=self.validate_module_table()
+        result_input,error_list_input=self.validate_input_table()
+        result_output, error_list_output = self.validate_output_table()
+
+        error_list=[] # create list to store all error list
+        #append all error list into error list
+        error_list.append(error_list_module)
+        error_list.append(error_list_input)
+        error_list.append(error_list_output)
+        print('error_list: ',error_list)
+
+        return error_list
 
     def create_module_table_dict(self):
         table_frame=self.module_wids_dict['TableFrame']
@@ -1177,6 +1272,66 @@ class Code(Output):
 
         return code_dict
 
+    def code_save_button_call(self):
+        hs_tab_wids_dict = self.hs_tab_wids_dict  # store tabs widgets inherited from HandlerStudio Class
+        code_tab = hs_tab_wids_dict['CodeTab']  # store code tab widget
+        table_frame = self.module_wids_dict['TableFrame'] # store frame to show message
+        # store table widgets
+
+        error_list = self.validate_all_tables()
+        print(','.join(error_list))
+        if len(''.join(error_list)) > 0:
+            messagebox.showerror('Error', message=','.join(error_list), parent=code_tab)
+            return
+
+        # import all table dictionaries
+        module_table_dict = self.create_module_table_dict()
+        input_table_dict = self.create_input_table_dict()
+        output_table_dict = self.create_output_table_dict()
+        code_dict = self.create_code_dict()
+
+        handle=self.module_wids_dict['HandleVar'].get() #get the handle value
+
+        # perform below activity if the handle is Create New Handle
+        if handle == "Create New Handle":
+            new_handle = self.module_wids_dict['NewHandleEntry'].get()
+            new_action = self.module_wids_dict['NewActionEntry'].get()
+
+            result,message=db.create_new_handle(handler=new_handle,action=new_action,module=module_table_dict,
+                                                           input=input_table_dict,output=output_table_dict,code=code_dict)
+
+            if result=='Error':
+                messagebox.showerror('Error', message, parent=table_frame)
+            else:
+                messagebox.showinfo('Success', message, parent=table_frame)
+
+        # perform below activity if the handle is not Create New Handle
+        elif handle != "Create New Handle":
+            action= self.module_wids_dict['ActionVar'].get()
+            if action=="Create New Action":
+                new_action=self.module_wids_dict['NewActionEntry'].get()
+
+                result, message = db.create_new_handle(handler=handle, action=new_action,module=module_table_dict,
+                                                                  input=input_table_dict, output=output_table_dict,code=code_dict)
+
+                if result == 'Error':
+                    messagebox.showerror('Error', message, parent=table_frame)
+                else:
+                    messagebox.showinfo('Success', message, parent=table_frame)
+
+            if action != "Create New Action":
+
+                result, message = db.update_action(handler=handle, action=action,module=module_table_dict,
+                                                                  input=input_table_dict, output=output_table_dict,code=code_dict)
+
+                if result == 'Error':
+                    messagebox.showerror('Error', message, parent=table_frame)
+                else:
+                    messagebox.showinfo('Success', message, parent=table_frame)
+
+
 primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-main=MainWindow(primary_db)
+secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+db=Database.database(primary_db,secondary_db)
+main=MainWindow(primary_db,secondary_db)
 main.main_frame()
