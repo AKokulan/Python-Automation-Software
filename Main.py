@@ -6,7 +6,7 @@ from PIL import ImageTk, Image
 import time
 
 #import files
-import Database, ObjectStudio, ProcessStudio
+import Database, ObjectStudio, ProcessStudio,ProcessStudio1
 
 class Main:
 
@@ -299,7 +299,7 @@ class Main:
         process_studio_notebook.place(relx=0.01, rely=0.01, relheight=0.98, relwidth=0.98)
 
         os=ObjectStudio.ObjectStudio(root,db,object_studio_notebook) # Create ObjectStudio object
-        ps = ProcessStudio.ProcessStudio(process_studio_notebook, db) # Create ProcessStudio object
+        ps = ProcessStudio1.ProcessStudio(process_studio_notebook, db) # Create ProcessStudio object
 
         os.object_studio() # Call object_studio function
         ps.process_studio() # call process_studio function

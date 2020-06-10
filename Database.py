@@ -290,7 +290,7 @@ class database:
     def retrive_clusters(self):
         query = Query()
         process_doc = self.p_process_table.search((query.type == "process"))
-        cluster = ['Create New Cluster']
+        cluster = ['Create New Cluster','#NA']
         for each in process_doc:
             if each["cluster"] not in cluster: cluster.append(each["cluster"])
         print(process_doc)
@@ -300,7 +300,7 @@ class database:
     def retrive_process(self,cluster):
         query = Query()
         process_doc = self.p_process_table.search((query.cluster == cluster))
-        process = ['Create New Process']
+        process = ['Create New Process','#NA']
         for each in process_doc:
             if each["process"] not in process and each["process"]!="NA": process.append(each["process"])
         print(process_doc)
@@ -359,23 +359,25 @@ class database:
             (query.type == type) & (query.cluster == cluster) & (query.process == process))
         return process_doc
 
-    def create_new_process_page_in_primary_databse(self,frame,key,type,cluster,process,page,pageindex,steps,outputstorein):
+    #**
+    def create_new_process_page_in_primary_databse(self,type,cluster,process,page,pageindex,steps,outputstorein):
         #print('page is'+page)
         try:
+            # Derive key for page document.
+            now = datetime.utcnow()  # Strore UTC time now
+            key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
+                "%M") + now.strftime("%S") + now.strftime(
+                "%f") + "-P"  # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+
             self.p_process_table.insert({'key': key, 'type': type, 'cluster': cluster, 'process': process,
                                          'page': page, 'pageindex': pageindex, 'steps': steps,
                                          'outputstorein': outputstorein})
-            messagebox.showinfo("Success","Process Saved", parent=frame)
-            '''query = Query()
-            _page = self.p_process_table.search((query.type == type) &(query.cluster == cluster) & (query.process == process) & (query.page == page))
-            if len(_page)>0:
-                messagebox.showerror('Error',"Cluster/Process/Page  already exist",parent=frame)
-            else:
-                self.p_process_table.insert({'key': key,'type': type,'cluster':cluster ,'process':process,
-                                             'page':page,'pageindex':pageindex,'steps':steps,'outputstorein':outputstorein})'''
+            return "Success", 'Cluster/Process/Pages Saved'
 
         except Exception as e:
-            messagebox.showerror("Error", "Error in creating Cluster/Process/Page as: " + str(e), parent=frame)
+            message="Error in creating Cluster/Process/Page as: " + str(e)
+            #message = "Error in creating Cluster/Process/Page as: "
+            return 'Error',message
 
     def update_process_page_in_primary_databse(self,frame,type,cluster,process,page,handler,action,input,output,exception,status):
         try:

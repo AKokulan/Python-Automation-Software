@@ -82,10 +82,12 @@ class ProcessStudioProcessTab:
 
     def process_tab(self,process_studio_process_tab):
         fr_config=Frame(process_studio_process_tab)
-        fr_config.place(relx=0.015,rely=0.015,relheight=0.2,relwidth=0.97)
+        #fr_config.place(relx=0.015,rely=0.015,relheight=0.2,relwidth=0.97)
+        fr_config.place(relx=0.015, rely=0.015, relheight=0.2, width=1100)
 
         fr_table=Frame(process_studio_process_tab)
-        fr_table.place(relx=0.015, rely=0.219, relheight=0.75, relwidth=0.97)
+        #fr_table.place(relx=0.015, rely=0.219, relheight=0.75, relwidth=0.97)
+        fr_table.place(relx=0.015, rely=0.219, relheight=0.75, width=1100)
 
         cn_on_fr_table=Canvas(fr_table)
         cn_on_fr_table.pack(side=BOTTOM,fill=BOTH,expand=True)
@@ -112,23 +114,17 @@ class ProcessStudioProcessTab:
 
         #update session dictionary for widgets
         self.process_wids_dict['ConfigureFrame']=fr_config
-        self.process_wids_dict['TableFrame'] = fr_config
+        self.process_wids_dict['TableFrame'] = frame
         self.process_wids_dict['TableCanvas'] = cn_on_fr_table
         self.process_wids_dict['TableScrollBar'] = y_socrollbar
 
 
 
-        self.process_tab_config_frame_gui(process_studio_process_tab,'',"","")
+        self.process_tab_config_frame_gui()
 
-    def process_tab_config_frame_gui(self,ps_process_tab,cl_val,pr_val,pg_val):
-        print('printing process childs')
-
+    def process_tab_config_frame_gui(self):
         fr_config=self.process_wids_dict['ConfigureFrame']
-        #fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
-        #for each in fr_config.winfo_children():print("Elements in process tab- configuration frame in call --process_tab_config_frame_gui",each)
-        #for each in fr_table.winfo_children(): print("Elements in process tab- table frame in call --process_tab_config_frame_gui",each)
-
+        fr_table=self.process_wids_dict['TableFrame']
 
         children_windows = fr_config.winfo_children() # Store all the children widgets of frame confiration frame in a list
 
@@ -154,10 +150,11 @@ class ProcessStudioProcessTab:
         #var_cluster.set(cluster_val)
         om_cluster = OptionMenu(fr_config, var_cluster, *choices_cluster)
         om_cluster.place(relx=0.1, rely=0.085, relwidth=0.2)
+        om_cluster.configure(bg='Snow')
         self.process_wids_dict['ClusterOptionmenu'] = om_cluster
         self.process_wids_dict['ClusterOptionmenuVar'] = var_cluster
 
-        def create_new_cluster_om_call(*args): self.create_new_cluster_om_call(var_cluster, ps_process_tab)
+        def create_new_cluster_om_call(*args): self.create_new_cluster_om_call( )
         var_cluster.trace("w", create_new_cluster_om_call)
 
         lb_process = Label(fr_config, text="Process:", font=("Arial Bold", 10))
@@ -172,11 +169,12 @@ class ProcessStudioProcessTab:
 
         choices_process =self.db.retrive_process(var_cluster.get())
         om_process = OptionMenu(fr_config, var_process, *choices_process)
+        om_process.configure(bg='Snow')
         om_process.place(relx=0.43, rely=0.085, relwidth=0.2)
         self.process_wids_dict['ProcessOptionmenu'] = om_process
         self.process_wids_dict['ProcessOptionmenuVar'] = var_process
 
-        def create_new_process_om_call(*args): self.create_new_process_om_call(var_process,var_cluster, ps_process_tab)
+        def create_new_process_om_call(*args): self.create_new_process_om_call()
         var_process.trace("w", create_new_process_om_call)
 
         lb_page = Label(fr_config, text="Page:", font=("Arial Bold", 10))
@@ -191,18 +189,19 @@ class ProcessStudioProcessTab:
 
         choices_page = self.db.retrive_process_page(var_process.get())
         om_page = OptionMenu(fr_config, var_page, *choices_page)
+        om_page.configure(bg='Snow')
         om_page.place(relx=0.76, rely=0.085, relwidth=0.2)
         self.process_wids_dict['PageOptionmenu'] = om_page
         self.process_wids_dict['PageOptionmenuVar'] = var_page
 
-        def create_new_page_om_call(*args): self.create_new_page_om_call(var_page,var_process,var_cluster, ps_process_tab)
+        def create_new_page_om_call(*args): self.create_new_page_om_call()
         var_page.trace("w", create_new_page_om_call)
 
-        def update_output_tab_on_page_change(*args): self.update_output_tab_on_page_change(var_page,var_process,var_cluster, ps_process_tab)
-        var_page.trace("w", update_output_tab_on_page_change)
+        #def update_output_tab_on_page_change(*args): self.update_output_tab_on_page_change()
+        #var_page.trace("w", update_output_tab_on_page_change)
 
 
-        bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda fr=ps_process_tab : self.step_button_call(fr))
+        bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda f : self.step_button_call())
         bt_step.place(relx=0.0, rely=0.8, relwidth=0.04)
         self.process_wids_dict['StepButton'] = bt_step
 
@@ -211,11 +210,11 @@ class ProcessStudioProcessTab:
         self.process_wids_dict['RunButton'] = bt_step
 
 
-        bt_add_row = Button(fr_config, text="Add",command=lambda fr=ps_process_tab : self.add_row_button_call(fr), font=("Arial Bold", 10))
+        bt_add_row = Button(fr_config, text="Add",command=lambda  : self.add_row_button_call(), font=("Arial Bold", 10))
         bt_add_row.place(relx=0.92, rely=0.8, relwidth=0.04)
         self.process_wids_dict['AddButton'] = bt_add_row
 
-        bt_del_row = Button(fr_config, text="Del", font=("Arial Bold", 10),command=lambda fr=ps_process_tab : self.del_row_button_call(fr))
+        bt_del_row = Button(fr_config, text="Del", font=("Arial Bold", 10),command=lambda  : self.del_row_button_call())
         bt_del_row.place(relx=0.96, rely=0.8, relwidth=0.04)
         self.process_wids_dict['AddButton'] = bt_add_row
 
@@ -229,509 +228,235 @@ class ProcessStudioProcessTab:
         var_page_index=IntVar()
         sb_index = Spinbox(fr_config, from_=1, to=500,validate="all",textvariable=var_page_index)
         sb_index.place(relx=0.76, rely=0.37, width=40)
-        def trace_page_index(*args): self.trace_page_index(var_page_index, ps_process_tab)
+        def trace_page_index(*args): self.trace_page_index()
         var_page_index.trace("w", trace_page_index)
         self.process_wids_dict['PageIndexVar'] = var_page_index
 
         # Create save button to create/update the document in database
-        bt_save = Button(fr_config, text="Save", font=("Arial Bold", 10),
-                         command=lambda: self.save_document_button_call(ps_process_tab,var_cluster,var_process,var_page,var_page_index))
+        bt_save = Button(fr_config, text="Save", font=("Arial Bold", 10), command=lambda: self.save_document_button_call())
         bt_save.place(relx=0.08, rely=0.8, relwidth=0.04)
         self.process_wids_dict['SaveButton'] = bt_save
 
-        def retrive_page(*args):self.retrive_page(ps_process_tab, var_cluster, var_process, var_page, var_page_index)
-        var_page.trace("w", retrive_page)
-
-    def run_button_call(self):
-        #derive widgets
-        fr_config=self.process_wids_dict['ConfigureFrame']
-        fr_table=self.process_wids_dict['TableFrame']
-        var_cluster=self.process_wids_dict['ClusterOptionmenuVar']
-        var_process=self.process_wids_dict['ProcessOptionmenuVar']
-        val_cluster=var_cluster.get() #Store cluster name selected
-        val_proces=var_process.get() # store process name selected
-
-        # retive the document of all the pages for the selected process
-        process_doc = self.db.retrive_all_pages_for_process(type="process", cluster=val_cluster, process=val_proces)
-        print("process document in --run_button_call: ", process_doc)
-
-        #retrive pages name of the selected process
-        pages_name=self.db.retrive_process_page(val_proces) #retrive all pages. Ex: ['Create New Page', 'Geneva Trade Upload', 'Trade Repair']
-        pages_name.remove("Create New Page") # remove Create New Page from the list
-        print("pages names list of the slected process in --run_button_call: ",pages_name)
-
-        #retrive lates page document for each page and store it in a list
-        latest_pages=[]
-        for each_page_name in pages_name:
-            each_latest_page=self.db.retrive_latest_page_for_page(type="process", cluster=val_cluster, process=val_proces,page=each_page_name)
-            latest_pages.append(each_latest_page)
-        print("latest page list of all the pages in --run_button_call: ",latest_pages)
-
-        sorted_latest_pages = []
-        for each in range(500):
-            for each_page in latest_pages:
-                #print(each_page)
-                #print(each_page['pageindex'])
-                if int(each_page['pageindex']) == each:
-                    sorted_latest_pages.append(each_page)
-                    break
-        print("sorted latest page --run_button_call: ", sorted_latest_pages)
-
-        '''Example latest page doc:  [{'key': '20200524160912397032-P', 'type': 'process', 'cluster': 'HSS', 'process': 'Custody', 'page': 'Geneva Trade Upload', 'pageindex': 0, 'steps': 'NA', 'outputstorein': 'NA'},
-         {'key': '20200526104904903894-P', 'type': 'process', 'cluster': 'HSS', 'process': 'Custody', 'page': 'Trade Repair', 'pageindex': 2, 'steps': 
-         [['new handle 2', 'Create New Action', "\n\tn1=100\n\tn2='test'\n\tn3=100.378\n\tn4=str()\n\tn5='done'", '\n\to1=str()\n\to2=str()', ''], ['new handle 6', 'new action 1', '\n\tn1=str()\n\tn2=100', "\n\to1=str()\n\to2='test'", '']], 'outputstorein': {}}]'''
-
-        pages=sorted_latest_pages
-        # derive function for module
-        module_function=self.derive_moduler_string(pages)
-        print("module function in --run_button_call: ",module_function)
-
-        output=sorted_latest_pages[0]["steps"][0][3]
-        print(output)
-
-        storein_value_dict={}
-
-        input=''
-        function_name=''
-
-        function = ''
-        func_call = ''
-        loop_count = 0
-        keys_dict={}
-        for each_page in pages:
-            page_name=each_page['page']
-            storein_value_dict[page_name]={}
-            storein_value_dict[page_name]['key1']='Test Storein Key'
-            print('storein_value_dict in --run_button_call: ', storein_value_dict)
-            row_num=0
-            active_loops = 0
-
-
-
-
-            for each_row in each_page['steps']:
-                zero_tab = ''
-                one_tab='\t'
-                two_tabs="\t\t"
-                three_tabs="\t\t\t"
-                handler = each_row[0]
-                loop_count+=1
-                row_num+=1
-                function_name="function_"+ str(loop_count)
-                outcome_name="outcome_"+ str(loop_count)
-                storein_key="sorein_key_list_"+ str(loop_count)
-
-                input = self.derive_input_string(each_row, storein_value_dict)
-                code = self.db.retrive_code_for_action(each_row[0], each_row[1])  # retrive code string
-                output_sorein_keys, output_name = self.derive_output_parameters(each_row)
-
-                keys_dict[loop_count]=keys_dict
-                print("output_sorein_keys: ",output_sorein_keys)
-                print("key dictionary in run button call: ",keys_dict)
-
-
-                #print('input string in --run_button_call', input)
-                #print('code string in --run_button_call', code)
-                #print('output_sorein_keys list in --run_button_call', output_sorein_keys)
-
-                if active_loops>0:
-                    for each in range(active_loops):
-                        zero_tab=zero_tab+ "\t"
-                        one_tab = one_tab + "\t"
-                        two_tabs = two_tabs + "\t"
-                        three_tabs = three_tabs + "\t"
-                if handler!="Loop Start":
-
-                    function= "\n"+ function   +"\n"+ "def " +function_name + "():"  + input   + code + "\n\t"+ "return " + output_name
-
-                    func_call="\n" + func_call+ "\n" + "storein_key" + "=" + str( keys_dict[loop_count]) + "\n" +zero_tab+ "try:" + "\n" + one_tab  +"global " + outcome_name + "\n" + one_tab + outcome_name + "=" + function_name + "()" + "\n" + one_tab + "print("+ " '" + outcome_name  +": ' " + "," + outcome_name + ")"  +"\n"+ one_tab + "loop_count=0" + "\n" + one_tab + "for each in storein_key" + ":" + "\n" + two_tabs + "if each !='' :" + "\n" + three_tabs + "storein_value_dict" + "['"  + page_name + "']" + "[" + "each" + "]"    + "=" + outcome_name +  "[loop_count]"  + "\n" + two_tabs + "loop_count+=1" + "\n" + "except Exception as e:" + "\n" + one_tab +   ' error=' + " ' "  + 'Error: Error occured in page:  ' + page_name + "  in row number:  " + str(loop_count) + " as: " + " ' " + "+ str(e)"
-
-                if handler=="Loop Start":
-                    active_loops=+1
-                if handler == "Loop End":
-                    active_loops =-1
-                    input_list, input_name_list, input_value_list = self.format_input(each_row[2])
-                    loop_dataframe=input_value_list[0]
-                    func_call=func_call + "for index,row in " + loop_dataframe + ".iterrows:"
-
-                #print(function)
-                #print(func_call)
-
-                function_string= "\n" + module_function + "\n" + function + "\n" + func_call
-                print(function_string)
-
-        print(keys_dict)
-        exec(function_string)
-        #print(outcome_1)
-        #print(outcome_2)
-        #print(storein_value_dict)
-
-
-
-
-
-        print('storein_value_dict in --run_button_call: ',storein_value_dict)
-
-        # create list for output, output name , output value and store in variable
-       # output_list, output_name_list, output_value_list, storein_list = self.format_output(output)
-        #print(output_list, output_name_list, output_value_list, storein_list)
-
-    def derive_output_parameters(self,row):
-        output_list, output_name_list, output_value_list, storein_list = self.format_output(row[3])
-        #ex: ['o1=&Geneva Trade Upload.key1&=str()', 'o2=&dummy&=str()'] ['o1', 'o2'] ['', ''] ['&Geneva Trade Upload.key1&', '']
-
-        storein_key=[]
-        for each in storein_list:
-            if "&" in each and "dummy" not in each and "." in each :
-                key=(each.replace("&","")).split(".")[1]
-                print(key)
-                storein_key.append(key)
-            else:
-                storein_key.append(each)
-
-            # Crate comma separated outputname string..Ex: o1,o2,o3
-        output_name = ''  # Create output name comma separated variable
-        loop_count = 1
-        for each in output_name_list:
-            if each != '' and loop_count > 1: output_name = output_name + ',' + each  # only add if output name is not an empty string and add comma if more bthan one output name found
-            if each != '' and loop_count == 1: output_name = each  # #only add if output name is not an empty string
-            loop_count += 1
-
-        return storein_key,output_name
-
-    def derive_input_string(self,row,storein_value_dict):
-        # create list for input, input name , input value
-        input_list, input_name_list, input_value_list = self.format_input(row[2])
-        print('printing input_value_list in --derive_input_string: ', input_value_list)
-        print('printing input_name_list in --derive_input_string: ', input_name_list)
-
-        # create a input string
-        input = ''  # Create input variable
-        loop_count = 0
-        for each_name in input_name_list:
-            storein_key = ""
-            if "&" in str(input_value_list[
-                              loop_count]):  # Find input value consist of & key - which indicate that input value taken from the storein key value
-                input_value = (input_value_list[loop_count]).replace('&','')
-                page_name=input_value.split('.')[0]
-                storein_key = input_value.split('.')[1]
-                # Stroe store in key
-                print(page_name)
-
-                print(storein_key)
-                # Create input string
-                # 1. storein dict is updated in runtime
-                # 2. get the value from storein dict and repplace
-                value=str(storein_value_dict[page_name][storein_key])
-                if value.isnumeric()!=True:
-                    value="'"+ value + "'"
-                input = "\n\t" + input + "\n\t" + each_name + "=" + value
-
-            elif str(input_value_list[loop_count])=="":
-                # create input string assign it value
-                input = input + "\n\t" + each_name + "=" + 'str()'
-
-            elif str(input_value_list[loop_count])!="":
-                # create input string assign it value
-                val=str(input_value_list[loop_count])
-                '''if str(val).isnumeric()!=True:
-                    val="'" +val + "'"'''
-                input = input + "\n\t" + each_name + "=" + val
-
-            loop_count += 1
-        #print('printing input in --derive_input_string: ', input)
-
-        return input
-
-    def derive_moduler_string(self,pages): # pages input is given as dictionaries in a list
-        module_function = ''
-        handler_list = []
-        for each_page in pages:
-            steps = each_page["steps"]
-            for each_row in steps:
-                handler = each_row[0]
-                if handler not in handler_list:
-                    handler_list.append(handler)
-                    # retrieve and format modules
-                    module_retrived = self.db.retrive_module_for_handler(handler)  # retruive module string
-                    if len(module_retrived) > 0:
-                        module_list = module_retrived.split('\n')  # create list by splitting "\n"
-                        # module = ''  # Create module string
-                        for each in module_list:
-                            if each != '' and each not in module_function:
-                                module_function = module_function + '\nimport ' + each  # add "import"  infront of each module and create module string
-        return module_function
-
-
-    #def derive_function_for_multipe_page(self):
-
-    def derive_processtab_widgets(self,ps_process_tab):
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-
-        return fr_config,fr_table
-
-
-    def retrive_page(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
-        print("variables list for the widgets added in process table in --retrive_page: ", self.var_table)
-        self.var_table=[]
-
-        fr_config,fr_table=self.derive_processtab_widgets(ps_process_tab)
-
-        '''fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]'''
-
-        children_windows_fr_tbl = fr_table.winfo_children()
-        for each in children_windows_fr_tbl:
-            each.destroy()
-
-        # Store tha values for cluster, process, page and page index
-        val_cluster, val_process, val_page, val_page_index = var_cluster.get(), var_process.get(), var_page.get(), var_page_index.get()
-        existing_page_doc = self.db.retrive_process_page_doc( "process", val_cluster, val_process, val_page)
-
-        print("existing_page_doc  in --retrive_page: ", existing_page_doc)
-
-        existing_pages_key = []
-        for each_doc in existing_page_doc:
-            existing_pages_key.append(each_doc['key'])
-        existing_pages_key.sort(reverse=True)
-
-        print("Key for sleected process in --retrive_page ",existing_pages_key)
-
-        latest_page_doc_key=existing_pages_key[0]
-        latest_page_doc=''
-        for each_doc in existing_page_doc:
-            if each_doc['key']==latest_page_doc_key:
-                latest_page_doc=each_doc
-        print("Latest page doc in --retrive_page: ",latest_page_doc)
-
-        page_index_latest_page_doc=latest_page_doc['pageindex']
-        steps_latest_page_doc=latest_page_doc['steps'] #Store a list of rows. Ex:[[],[]]
-        storein_latest_page_doc = latest_page_doc['outputstorein'] # Store the dictionary of output stare in. Ex: {"a": "", "b": ""}
-
-        if page_index_latest_page_doc!=0:
-            var_page_index.set(page_index_latest_page_doc)
-
-        print("steps page doc in --retrive_page: ", steps_latest_page_doc)
-        if steps_latest_page_doc[0][0]!="NA":
-            for each_row in steps_latest_page_doc:
-                self.add_row_button_call(ps_process_tab)
-
-        if steps_latest_page_doc[0][0]!="NA":
-            loop_count=0
-            for each_row in range(len(steps_latest_page_doc)):
-                self.var_table[loop_count][0].set(steps_latest_page_doc[loop_count][0])
-                self.var_table[loop_count][1].set(steps_latest_page_doc[loop_count][1])
-                self.var_table[loop_count][2].set(steps_latest_page_doc[loop_count][2])
-                self.var_table[loop_count][3].set(steps_latest_page_doc[loop_count][3])
-                self.var_table[loop_count][4].set(steps_latest_page_doc[loop_count][4])
-
-                loop_count+=1
-
-        print("variables list for the widgets added in process table in --retrive_page: ", self.var_table)
-
-
-        '''if len(existing_page_doc)==0:
-         self.db.create_new_process_page_in_primary_databse(self, ps_fr_config, key, "process",
-                                                            val_cluster, val_process, val_page, val_page_index, val_tbl_list,output_table_values)
-        else:'''
-
-
-    def save_document_button_call(self,ps_process_tab,var_cluster,var_process,var_page,var_page_index):
-        #print("Dictionary of table values in ----save_document_button_call", output_table_values)
-        ps_fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
-        ps_fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
-
-        # Store tha values for cluster, process, page and page index
-        val_cluster, val_process, val_page, val_page_index=var_cluster.get(),var_process.get(),var_page.get(),var_page_index.get()
-
-        # If value is blank for cluster or process or page or page index, show the error message and terminate the process
-        if val_cluster=="" or val_process=="" or val_page=="" or val_page_index=="":
-            messagebox.showerror("Error","Value missing for Cluster/Process/Page/Page Index", parent=ps_fr_config)
-            return
-        print("Values for clusster, process,page and page index in --save_document_button_call",val_cluster, val_process, val_page, val_page_index)
-
-        print("Variables in process tab table in --save_document_button_call",self.var_table)
-
-        # Get the values for each row in process tab table from -self.var_table list and store it in a list for each row
-        val_tbl_list=[] # Create 2D list to store the value for rows
-        row_num=1 # Store row number
-        for each_row in self.var_table:
-            temp_val_row=[] #temporary list to store the value for each row which will appended to -val_tbl_list
-            loop_count = 0 # Store loop count for each value in a row in an order as Handler/Input/Output/Action/Exception Handle
-            for each_var in each_row:
-                loop_count+=1
-                print("var value in save button call for process: ",each_var.get())
-
-                # Show the error if the value is empty for the fields other than Exception Handle
-                if loop_count!=5 and each_var.get()=="":
-                    messagebox.showerror("Error", "Value missing for Handler/Input/Output/Action in the row: " + str(row_num),parent=ps_fr_config)
-                    return
-                temp_val_row.append(each_var.get()) # Append the value for each field in a list
-            val_tbl_list.append(temp_val_row) # Append the rows into a list
-            row_num+=1
-
-        print("List of table values in process tab by row in ----save_document_button_call",val_tbl_list)
-
-        output_table_values=self.output_tab_instance.get_table_values() # Store the output storein variables values ina dictionary
-        print("Dictionary of table values in ----save_document_button_call",output_table_values)
-
-
-
-        #Derive key for page document.
-        now = datetime.utcnow() # Strore UTC time now
-        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
-            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
-        print("key for process ----save_document_button_call",key)
-
-
-        #Create a new document for the page
-        self.db.create_new_process_page_in_primary_databse( ps_fr_config, key, "process",
-                                                           val_cluster, val_process, val_page, val_page_index,
-                                                           val_tbl_list, output_table_values)
-
-        '''existing_page_doc = self.db.retrive_process_page_doc(self, type, val_cluster, val_process, val_page)
-        if len(existing_page_doc)==0:
-            self.db.create_new_process_page_in_primary_databse(self, ps_fr_config, key, "process",
-                                                               val_cluster, val_process, val_page, val_page_index, val_tbl_list,output_table_values)
-        else:
-            existing_pages_key=[]
-            for each_doc in existing_page_doc:
-                existing_pages_key.append(each_doc['key'])
-            existing_pages_key.sort(reverse = True)
-            latest'''
-
-    def update_output_tab_on_page_change(self,var_page,var_process,var_cluster, ps_process_tab):
-        print("variables list for the widgets added in process table in --update_output_tab_on_page_change - start- : ",
-              self.var_table)
-        # destoy all the chidren widgets in output tab
-        self.output_tab_instance.destory_all_widgets_in_output_tab()
-        # recreate all the widgets by calling output tab function
-        self.output_tab_instance.output_tab(self.process_studio_output_tab)
-        print("variables list for the widgets added in process table in --update_output_tab_on_page_change: ", self.var_table)
-    def trace_page_index(self,var_page_index, ps_process_tab):
-        fr_config = (ps_process_tab.winfo_children())[0] #Derive Configration frame in process tab
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0] #Derive table frame in process tab
-        try:
-            val=var_page_index.get() # Store the value of the process index spinbox
-            if val<1 or val>500 : # Check whther the selected value fall in between 0 to 500
-                messagebox.showerror("Error","Invalid Value: Index can only be within  1-500 Range",parent=fr_config) # Show the error if the value is out of range
-                var_page_index.set(1) # Set page index peinbox value as 1
-        except:
-            var_page_index.set(1)# Set page index peinbox value as 1
-            messagebox.showerror("Error", "Invalid Value: Index can only be within  1-500 Range", parent=fr_config) #Show the error in any error
-
-
-    def create_new_cluster_om_call(self,var,ps_process_tab):
-
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+        #def retrive_page(*args):self.retrive_page( var_cluster, var_process, var_page, var_page_index)
+        #var_page.trace("w", retrive_page)
+
+    #**
+    def create_new_cluster_om_call(self):
+        # drive widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+
+        cluster_val=cluster_var.get()
 
         print("cluster value in --create_new_cluster_om_call:  ", self.cluster_om_var_val)
-        if self.cluster_om_var_val!="" and  self.cluster_om_var_val.strip() != "Create New Cluster":
+
+        #ask question whether user want to create cluster
+        if cluster_val!="" and  cluster_val.strip() != "Create New Cluster":
             MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to exit from current cluster? Unsaved values will be lost!',
                                             icon='warning', parent=fr_config)
             if MsgBox == 'no':
-                var.set(self.cluster_om_var_val)
+                cluster_var.set(self.cluster_om_var_val)
                 return
 
-        self.cluster_om_var_val=var.get()
+        self.cluster_om_var_val=cluster_val
+
+        #delete all widgets in table frame
         children_windows_fr_tbl = fr_table.winfo_children()
         for each in children_windows_fr_tbl:
             each.destroy()
 
-        var_value=var.get()
-        children_windows=fr_config.winfo_children()
+        var_value=cluster_var.get()# store  cluster value
 
+        # perform below activity if the cluster value value is Create New Cluster
         if var_value=="Create New Cluster":
-            loop_count=0
-            for each in children_windows:
-                loop_count+=1
-                if loop_count>2:
-                    each.destroy()
+            # delete all the widgets in configuration frame except to cluster label and cluster option menu
+            self.destory_widgets_for_new_cluster_call()
 
-            lb_new_cluster=Label(fr_config,text="New Cluster",bg='gray')
+            #label for new cluster
+            lb_new_cluster=Label(fr_config,text="New Cluster:")
             lb_new_cluster.place(relx=0.018,rely=0.35,relwidth=0.07)
 
-            var_cluster=StringVar()
-            choices_cluster=['Create New Cluster']
+            # entry for new cluster
             et_new_cluster=Entry(fr_config)
             et_new_cluster.place(relx=0.1, rely=0.37,relwidth=0.2)
 
-            bt_new_cluster_save = Button(fr_config, text="Save", bg='gray',command=lambda ent=et_new_cluster,fr=fr_config,var=var :self.cluster_save_button_call(ent,fr,var))
+            # save button for new cluster
+            bt_new_cluster_save = Button(fr_config, text="Save",command=lambda  :self.cluster_save_button_call())
             bt_new_cluster_save.place(relx=0.1, rely=0.58, relwidth=0.07)
 
-            bt_new_cluster_cancel = Button(fr_config, text="Cancel", bg='gray',command=lambda fr=ps_process_tab,val=var_value :self.process_tab_config_frame_gui(fr,val,'',''))
+            #cancel button for new cluster
+            bt_new_cluster_cancel = Button(fr_config, text="Cancel",command=lambda  :self.process_tab_config_frame_gui())
             bt_new_cluster_cancel.place(relx=0.18, rely=0.58, relwidth=0.07)
+
+            # store widgets in instance dictionary
+            self.process_wids_dict['NewClusterLbel'] = lb_new_cluster
+            self.process_wids_dict['NewClusterEntry'] = et_new_cluster
+            self.process_wids_dict['NewClusterSaveButton'] = bt_new_cluster_save
+            self.process_wids_dict['NewClusterCancelButton'] = bt_new_cluster_cancel
         else:
-            #var_value = var.get()
-            self.process_tab_config_frame_gui(ps_process_tab,var_value,'','')
+            self.process_tab_config_frame_gui()
 
-    def create_new_process_om_call(self,var_process,var_cluster,ps_process_tab):
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+    #**
+    def destory_widgets_for_new_cluster_call(self):
 
-        if var_cluster.get()=="":
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        children_windows = fr_config.winfo_children() #store all the widgets from configuration frame into a list
+
+        #delete all the widgets in configuration frame except to cluster label and cluster option menu
+        loop_count = 0
+        for each in children_windows:
+            loop_count += 1
+            if loop_count > 2: # because first two widgets in configuration frame are cluster label and cluster option menu
+                each.destroy()
+
+
+        # update dictionary for session widgets
+        self.process_wids_dict['NewClusterLbel'] = ''
+        self.process_wids_dict['NewClusterEntry'] = ''
+        self.process_wids_dict['NewClusterSaveButton'] = ''
+        self.process_wids_dict['NewClusterCancelButton'] = ''
+        self.process_wids_dict['ProcessLabel']=''
+        self.process_wids_dict['ProcessOptionmenu'] = ''
+        self.process_wids_dict['ProcessOptionmenuVar'] = ''
+        self.process_wids_dict['NewProcessLabel'] = ''
+        self.process_wids_dict['NewProcessEntry'] = ''
+        self.process_wids_dict['NewProcessSaveButton'] = ''
+        self.process_wids_dict['NewProcessCancelButton'] = ''
+        self.process_wids_dict['PageLabel'] = ''
+        self.process_wids_dict['PageOptionmenu'] = ''
+        self.process_wids_dict['PageOptionmenuVar'] = ''
+        self.process_wids_dict['NewPageLabel'] = ''
+        self.process_wids_dict['NewPageEntry'] = ''
+        self.process_wids_dict['NewPageSaveButton'] = ''
+        self.process_wids_dict['NewPageCancelButton'] = ''
+        self.process_wids_dict['PageIndexLabel'] = ''
+        self.process_wids_dict['PageIndexSpinbox'] = ''
+        self.process_wids_dict['PageIndexVar'] = ''
+        self.process_wids_dict['StepButton'] = ''
+        self.process_wids_dict['AddButton'] = ''
+        self.process_wids_dict['SaveButton'] = ''
+        self.process_wids_dict['DeleteButton'] = ''
+        self.process_wids_dict['RunButton'] = ''
+
+
+    def create_new_process_om_call(self):
+
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+
+        #store cluster and process value
+        cluster_val=cluster_var.get()
+        process_val=process_var.get()
+
+        # check value selected in cluster and show message if not selected
+        if cluster_val=="" or cluster_val=='Create New Cluster':
             messagebox.showerror("Error","Slelect Cluster Before Process..",parent=fr_config)
-            var_process.set("")
+            process_var.set("")
             return
 
-        if self.process_om_var_val != "" and self.process_om_var_val != "Create New Process":
+        #ask for users confirmation to change the value for process
+        if process_val != "" and process_val != "Create New Process":
             MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to exit from current process? Unsaved values will be lost!',
                                             icon='warning', parent=fr_config)
             if MsgBox == 'no':
-                var_process.set(self.process_om_var_val)
+                process_var.set(self.process_om_var_val) # if no slected, reinstate the process value as previous value
                 return
 
-        self.process_om_var_val = var_process.get()
+        self.process_om_var_val = process_var.get()
 
+        #destory all the widgets in table frame
         children_windows_fr_tbl = fr_table.winfo_children()
         for each in children_windows_fr_tbl:
             each.destroy()
 
+        if process_val=="Create New Process":
+            self.destory_widgets_for_new_process_call()
 
-        children_windows=fr_config.winfo_children()
-
-        var_process_value=var_process.get()
-        var_cluster_value=var_cluster.get()
-
-
-        if var_process_value=="Create New Process":
-            loop_count=0
-            for each in children_windows:
-                loop_count+=1
-                if loop_count>4:
-                    each.destroy()
-
-            lb_new_process=Label(fr_config,text="New Process",bg='gray')
-            #lb_new_cluster.place(relx=0.018,rely=0.35,relwidth=0.07)
+            # new process label
+            lb_new_process=Label(fr_config,text="New Process")
             lb_new_process.place(relx=0.33, rely=0.35, relwidth=0.07)
 
+            # entry for new page
             et_new_process=Entry(fr_config)
             et_new_process.place(relx=0.43, rely=0.37,relwidth=0.2)
 
-            bt_new_process_save = Button(fr_config, text="Save", bg='gray',
-                                         command=lambda ent=et_new_process,fr=fr_config,var1=var_process,var2=var_cluster :
-                                         self.process_save_button_call(ent,fr,var1,var2))
+            #button for new process save
+            bt_new_process_save = Button(fr_config, text="Save",command=lambda :self.process_save_button_call())
             bt_new_process_save.place(relx=0.43, rely=0.58, relwidth=0.07)
 
-            bt_new_process_cancel = Button(fr_config, text="Cancel", bg='gray',
-                                           command=lambda fr=ps_process_tab,val1=var_cluster_value,
-                                                          val2=var_process_value :self.process_tab_config_frame_gui(fr,val1,val2,''))
+            # button new process cancel
+            bt_new_process_cancel = Button(fr_config, text="Cancel",command=lambda :self.process_tab_config_frame_gui())
             bt_new_process_cancel.place(relx=0.52, rely=0.58, relwidth=0.07)
 
+            # store widgets in instance dictionary
+            self.process_wids_dict['NewProcessLabel'] = lb_new_process
+            self.process_wids_dict['NewProcessEntry'] = et_new_process
+            self.process_wids_dict['NewProcessSaveButton'] = bt_new_process_save
+            self.process_wids_dict['NewProcessCancelButton'] = bt_new_process_cancel
+
         else:
-            # var_value = var.get()
-            self.process_tab_config_frame_gui(ps_process_tab, var_cluster_value, var_process_value, '')
+            self.process_tab_config_frame_gui()
 
-    def create_new_page_om_call(self,var_page,var_process,var_cluster,ps_process_tab):
-        print("variables list for the widgets added in process table in --create_new_page_om_call: ", self.var_table)
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+    # **
+    def destory_widgets_for_new_process_call(self):
 
-        if var_process.get()=="":
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        children_windows = fr_config.winfo_children()  # store all the widgets from configuration frame into a list
+
+        # delete all the widgets in configuration frame except to cluster label and cluster option menu
+        loop_count = 0
+        for each in children_windows:
+            loop_count += 1
+            # because first four widgets in configuration frame are cluster label and cluster option menu,process labe and process option menu
+            if loop_count > 4:
+                each.destroy()
+
+        # update dictionary for session widgets
+        self.process_wids_dict['NewClusterLbel'] = ''
+        self.process_wids_dict['NewClusterEntry'] = ''
+        self.process_wids_dict['NewClusterSaveButton'] = ''
+        self.process_wids_dict['NewClusterCancelButton'] = ''
+        self.process_wids_dict['NewProcessLabel'] = ''
+        self.process_wids_dict['NewProcessEntry'] = ''
+        self.process_wids_dict['NewProcessSaveButton'] = ''
+        self.process_wids_dict['NewProcessCancelButton'] = ''
+        self.process_wids_dict['PageLabel'] = ''
+        self.process_wids_dict['PageOptionmenu'] = ''
+        self.process_wids_dict['PageOptionmenuVar'] = ''
+        self.process_wids_dict['NewPageLabel'] = ''
+        self.process_wids_dict['NewPageEntry'] = ''
+        self.process_wids_dict['NewPageSaveButton'] = ''
+        self.process_wids_dict['NewPageCancelButton'] = ''
+        self.process_wids_dict['PageIndexLabel'] = ''
+        self.process_wids_dict['PageIndexSpinbox'] = ''
+        self.process_wids_dict['PageIndexVar'] = ''
+        self.process_wids_dict['StepButton'] = ''
+        self.process_wids_dict['AddButton'] = ''
+        self.process_wids_dict['SaveButton'] = ''
+        self.process_wids_dict['DeleteButton'] = ''
+        self.process_wids_dict['RunButton'] = ''
+
+
+    #**
+    def create_new_page_om_call(self):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+        page_var= self.process_wids_dict['PageOptionmenuVar']
+
+        page_val=page_var.get()
+
+        # ensure process is selected before page
+        if process_var.get()=="" or process_var.get()=="Create New Process":
             messagebox.showerror("Error","Slelect Process Before Page..",parent=fr_config)
-            var_page.set("")
+            page_var.set("")
             return
 
 
@@ -740,127 +465,177 @@ class ProcessStudioProcessTab:
                                             'Are you sure you want to exit from current page? Unsaved values will be lost!',
                                             icon='warning', parent=fr_config)
             if MsgBox == 'no':
-                var_page.set(self.page_om_var_val)
+                page_var.set(self.page_om_var_val)
                 return
 
-        self.page_om_var_val = var_page.get()
+        self.page_om_var_val = page_val
 
         children_windows=fr_config.winfo_children()
+        if page_val=="Create New Page":
+            self.destory_widgets_for_new_page_call()
 
-        var_page_value=var_page.get()
-        var_process_value=var_process.get()
-        var_cluster_value=var_cluster.get()
-
-
-        if var_page_value=="Create New Page":
-
-            children_windows_fr_tbl = fr_table.winfo_children()
-            for each in children_windows_fr_tbl:
-                each.destroy()
-
-
-            loop_count=0
-            for each in children_windows:
-                loop_count+=1
-                if loop_count>6:
-                    each.destroy()
-
-            lb_new_page=Label(fr_config,text="New Page",bg='gray')
+            #new page label
+            lb_new_page=Label(fr_config,text="New Page")
             lb_new_page.place(relx=0.66, rely=0.35, relwidth=0.07)
 
+            #new page entry
             et_new_page=Entry(fr_config)
             et_new_page.place(relx=0.76, rely=0.37,relwidth=0.2)
 
-            bt_new_process_save = Button(fr_config, text="Save", bg='gray',command=lambda ent=et_new_page,
-                                                                                          fr=fr_config,var2=var_process,var3=var_cluster,
-                                                     var1=var_page :self.new_page_save_button_call(ent,fr,var1,var2,var3))
+            #new process save button
+            bt_new_process_save = Button(fr_config, text="Save",command=lambda  :self.new_page_save_button_call())
             bt_new_process_save.place(relx=0.76, rely=0.58, relwidth=0.07 )
-            #new_page_save_button_call(self, ent, fr, var_page, var_process, var_cluster)
-            bt_new_process_cancel = Button(fr_config, text="Cancel", bg='gray',
-                                           command=lambda fr=ps_process_tab,val1=var_cluster_value,val2=var_process_value,
-                                                          val3=var_page_value :self.process_tab_config_frame_gui(fr,val1,val2,val3))
+
+            #new process cancel button
+            bt_new_process_cancel = Button(fr_config, text="Cancel", command=lambda :self.process_tab_config_frame_gui())
             bt_new_process_cancel.place(relx=0.85, rely=0.58, relwidth=0.07)
 
-        '''else:
+            # store widgets in instance dictionary
+            self.process_wids_dict['NewPageLabel'] = lb_new_page
+            self.process_wids_dict['NewPageEntry'] = et_new_page
+            self.process_wids_dict['NewPageSaveButton'] = bt_new_process_save
+            self.process_wids_dict['NewPageCancelButton'] = bt_new_process_cancel
+
+        else:
             # var_value = var.get()
-            self.process_tab_config_frame_gui(ps_process_tab, var_cluster_value , var_process_value, '')'''
+            self.process_tab_config_frame_gui()
 
         print("variables list for the widgets added in process table in --create_new_page_om_call: ", self.var_table)
 
-    def cluster_save_button_call(self,ent,fr,var):
-        self.cluster_om_var_val = var.get()
-        clusters = self.db.retrive_clusters()
-        print(clusters)
-        new_cluster_value=ent.get()
-        print(new_cluster_value)
+    # **
+    def destory_widgets_for_new_page_call(self):
 
-        #Derive key for page document.
-        now = datetime.utcnow() # Strore UTC time now
-        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
-            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        children_windows = fr_config.winfo_children()  # store all the widgets from configuration frame into a list
 
+        # delete all the widgets in configuration frame except to cluster label and cluster option menu
+        loop_count = 0
+        for each in children_windows:
+            loop_count += 1
+            # because first six widgets in configuration frame are cluster label and cluster option menu,process labe and process option menu
+            if loop_count > 6:
+                each.destroy()
+
+        # update dictionary for session widgets
+        self.process_wids_dict['NewClusterLbel'] = ''
+        self.process_wids_dict['NewClusterEntry'] = ''
+        self.process_wids_dict['NewClusterSaveButton'] = ''
+        self.process_wids_dict['NewClusterCancelButton'] = ''
+        self.process_wids_dict['NewProcessLabel'] = ''
+        self.process_wids_dict['NewProcessEntry'] = ''
+        self.process_wids_dict['NewProcessSaveButton'] = ''
+        self.process_wids_dict['NewProcessCancelButton'] = ''
+        self.process_wids_dict['NewPageLabel'] = ''
+        self.process_wids_dict['NewPageEntry'] = ''
+        self.process_wids_dict['NewPageSaveButton'] = ''
+        self.process_wids_dict['NewPageCancelButton'] = ''
+        self.process_wids_dict['PageIndexLabel'] = ''
+        self.process_wids_dict['PageIndexSpinbox'] = ''
+        self.process_wids_dict['PageIndexVar'] = ''
+        self.process_wids_dict['StepButton'] = ''
+        self.process_wids_dict['AddButton'] = ''
+        self.process_wids_dict['SaveButton'] = ''
+        self.process_wids_dict['DeleteButton'] = ''
+        self.process_wids_dict['RunButton'] = ''
+
+    def cluster_save_button_call(self):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        new_cluster_entry = self.process_wids_dict['NewClusterEntry']
+
+        self.cluster_om_var_val = cluster_var.get() # set the cluster value in instance variable
+        clusters = self.db.retrive_clusters() #retrive all the clusters
+        new_cluster_value=new_cluster_entry.get() # get the value for new cluster from new cluster entry box
+
+
+        #check if the cluster already exists and if not exist perform the below activity
         if new_cluster_value not in clusters:
-            self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=new_cluster_value,process='NA',
-                                                               page='NA',pageindex=0,steps="NA",outputstorein="NA")
-            print('cluster updated')
-            var.set(new_cluster_value)
-            self.cluster_om_var_val = var.get()
-            messagebox.showinfo("Success", 'Cluster created', parent=fr)
+            result,message=self.db.create_new_process_page_in_primary_databse(type='process',cluster=new_cluster_value,process='#NA',
+                                                               page='#NA',pageindex=1,steps="#NA",outputstorein="#NA")
+
+            if result=='Error':
+                messagebox.showerror(result,message,parent=fr_config)
+            else:
+                messagebox.showinfo(result, message, parent=fr_config)
+                cluster_var.set(new_cluster_value)
+                self.cluster_om_var_val = cluster_var.get()
+                #self.process_wids_dict['ClusterOptionmenuVar']=cluster_var.get()
+
+        #IF THE CLUSTER ALREADY EXIST, SHOW THE BELOW MESSAGE
         else:
-            messagebox.showerror("Error",'Cluster Already Exists',parent=fr)
-            ent.delete(0,END)
+            messagebox.showerror("Error",'Cluster Already Exists',parent=fr_config)
+            new_cluster_entry.delete(0,END)
 
-    def process_save_button_call(self,ent,fr,var_process,var_cluster):
-        self.process_om_var_val=var_process.get()
-        val_var_process=var_process.get()
-        val_var_cluster=var_cluster.get()
-        process = self.db.retrive_process(val_var_cluster)
-        print(process)
-        new_process_value=ent.get()
-        print(new_process_value)
+    def process_save_button_call(self):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+        new_process_entry = self.process_wids_dict['NewProcessEntry']
 
-        #Derive key for page document.
-        now = datetime.utcnow() # Strore UTC time now
-        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
-            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
 
+        self.process_om_var_val=process_var.get() # set instance variabel for process value as current process value
+        cluster_val=cluster_var.get() #get cluster value
+        process = self.db.retrive_process(cluster_val) #retrive all processes
+
+        new_process_value=new_process_entry.get() #get new process value
+
+        # check if the process already exists and if not exist perform the below activity
         if new_process_value not in process:
-            self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=val_var_cluster,process=new_process_value,
-                                                               page='NA',pageindex=0,steps="NA",outputstorein="NA")
-            print('cluster updated')
-            messagebox.showinfo("Success", 'Process created', parent=fr)
-            var_process.set(new_process_value)
-            self.process_om_var_val = new_process_value
+            result, message = self.db.create_new_process_page_in_primary_databse(type='process',
+                                                                                 cluster=cluster_val,
+                                                                                 process=new_process_value,
+                                                                                 page='#NA', pageindex=1, steps="#NA",
+                                                                                 outputstorein="#NA")
+
+            if result == 'Error':
+                messagebox.showerror(result, message, parent=fr_config)
+            else:
+                messagebox.showinfo(result, message, parent=fr_config)
+                process_var.set(new_process_value)
+                self.process_om_var_val = new_process_value
+        # IF THE CLUSTER ALREADY EXIST, SHOW THE BELOW MESSAGE
         else:
-            messagebox.showerror("Error",'Process Already Exists',parent=fr)
-            ent.delete(0,END)
+            messagebox.showerror("Error",'Process Already Exists',parent=fr_config)
+            new_process_entry.delete(0,END)
 
-    def new_page_save_button_call(self,ent,fr,var_page,var_process,var_cluster):
-        self.page_om_var_val = var_page.get()
-        #val_var_page=var_page.get()
-        val_var_process=var_process.get()
-        val_var_cluster=var_cluster.get()
-        page = self.db.retrive_process_page(val_var_process)
-        print(page)
-        new_page_value=ent.get()
-        print(new_page_value)
+    def new_page_save_button_call(self):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+        new_process_entry = self.process_wids_dict['NewProcessEntry']
+        page_var = self.process_wids_dict['PageOptionmenuVar']
+        new_page_entry = self.process_wids_dict['NewPageEntry']
 
-        #Derive key for page document.
-        now = datetime.utcnow() # Strore UTC time now
-        key = now.strftime("%Y") + now.strftime("%m") + now.strftime("%d") + now.strftime("%H") + now.strftime(
-            "%M") + now.strftime("%S") + now.strftime("%f") + "-P" # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
 
+        self.page_om_var_val = page_var.get() #set the instance variable for page with current page value
+        val_var_process=process_var.get() #store process value
+        val_var_cluster=cluster_var.get() #store cluster value
+        page = self.db.retrive_process_page(val_var_process) #retrive all the pages
+        print('pages: ',page)
+        new_page_value=new_page_entry.get() #store the new page value
+
+        # check if the process already exists and if not exist perform the below activity
         if new_page_value not in page:
-            self.db.create_new_process_page_in_primary_databse(frame=fr,key=key,type='process',cluster=val_var_cluster,process=val_var_process,
-                                                               page=new_page_value,pageindex=1,steps=[["NA","NA","NA","NA","NA"]],outputstorein="NA")
+            result, message = self.db.create_new_process_page_in_primary_databse(type='process',
+                                                                                 cluster=val_var_cluster,
+                                                                                 process=val_var_process,
+                                                                                 page=new_page_value, pageindex=1, steps="#NA",
+                                                                                 outputstorein="#NA")
 
-            print('cluster updated')
-            messagebox.showinfo("Success", 'Page created', parent=fr)
-            var_page.set(new_page_value)
-            self.page_om_var_val = new_page_value
+            if result == 'Error':
+                messagebox.showerror(result, message, parent=fr_config)
+            else:
+                messagebox.showinfo(result, message, parent=fr_config)
+                page_var.set(new_page_value)
+                self.page_om_var_val = new_page_value
+        # IF THE CLUSTER ALREADY EXIST, SHOW THE BELOW MESSAGE
         else:
-            messagebox.showerror("Error",'Page Already Exists',parent=fr)
-            ent.delete(0,END)
+            messagebox.showerror("Error",'Page Already Exists',parent=fr_config)
+            new_page_entry.delete(0,END)
 
     def process_input_window(self,fr_table,handle_var,action_var,var_input,next_row):
 
