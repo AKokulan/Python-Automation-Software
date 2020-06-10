@@ -15,6 +15,7 @@ class ProcessStudio:
         self.process_studio_notebook=process_studio_notebook
         self.db=database
         self.root=100
+        self.process_table_var_dict={} #store the variable of the table by rows
 
 
     def process_studio(self):
@@ -58,6 +59,7 @@ class ProcessStudioProcessTab:
         self.process_studio_output_tab=process_studio_output_tab
         self.output_tab_instance=output_tab_instance
         #self.process_tab=ProcessStudioOutputTab(process_studio_notebook,database)
+        self.process_table_var_dict = {}  # store the variable of the table by rows
 
         self.step_output_dict={} # output value dictonary for step. Dic will be cleared with refresh button call
 
@@ -81,13 +83,16 @@ class ProcessStudioProcessTab:
                                  'StepButton':'','AddButton':'','SaveButton':'','DeleteButton':'','RunButton':''}
 
     def process_tab(self,process_studio_process_tab):
-        fr_config=Frame(process_studio_process_tab)
-        #fr_config.place(relx=0.015,rely=0.015,relheight=0.2,relwidth=0.97)
-        fr_config.place(relx=0.015, rely=0.015, relheight=0.2, width=1100)
+        main_frame=Frame(process_studio_process_tab,bg='snow')
+        main_frame.place(relx=0.015, rely=0.015, height=650, width=1120)
 
-        fr_table=Frame(process_studio_process_tab)
+        fr_config=Frame(main_frame)
+        #fr_config.place(relx=0.015,rely=0.015,relheight=0.2,relwidth=0.97)
+        fr_config.place(relx=0.0001, rely=0.015, relheight=0.17, relwidth=0.99)
+
+        fr_table=Frame(main_frame)
         #fr_table.place(relx=0.015, rely=0.219, relheight=0.75, relwidth=0.97)
-        fr_table.place(relx=0.015, rely=0.219, relheight=0.75, width=1100)
+        fr_table.place(relx=0.0001, rely=0.195, relheight=0.75, relwidth=0.99)
 
         cn_on_fr_table=Canvas(fr_table)
         cn_on_fr_table.pack(side=BOTTOM,fill=BOTH,expand=True)
@@ -202,20 +207,20 @@ class ProcessStudioProcessTab:
 
 
         bt_step = Button(fr_config, text="Step", font=("Arial Bold", 10), command=lambda f : self.step_button_call())
-        bt_step.place(relx=0.0, rely=0.8, relwidth=0.04)
+        bt_step.place(relx=0.0, rely=0.76, relwidth=0.04)
         self.process_wids_dict['StepButton'] = bt_step
 
         bt_run = Button(fr_config, text="Run", font=("Arial Bold", 10),command= lambda : self.run_button_call())
-        bt_run.place(relx=0.04, rely=0.8, relwidth=0.04)
+        bt_run.place(relx=0.04, rely=0.76, relwidth=0.04)
         self.process_wids_dict['RunButton'] = bt_step
 
 
         bt_add_row = Button(fr_config, text="Add",command=lambda  : self.add_row_button_call(), font=("Arial Bold", 10))
-        bt_add_row.place(relx=0.92, rely=0.8, relwidth=0.04)
+        bt_add_row.place(relx=0.92, rely=0.76, relwidth=0.04)
         self.process_wids_dict['AddButton'] = bt_add_row
 
         bt_del_row = Button(fr_config, text="Del", font=("Arial Bold", 10),command=lambda  : self.del_row_button_call())
-        bt_del_row.place(relx=0.96, rely=0.8, relwidth=0.04)
+        bt_del_row.place(relx=0.96, rely=0.76, relwidth=0.04)
         self.process_wids_dict['AddButton'] = bt_add_row
 
         lb_new_page = Label(fr_config, text="Page Index:",font=("Arial Bold", 10),anchor="w")
@@ -234,7 +239,7 @@ class ProcessStudioProcessTab:
 
         # Create save button to create/update the document in database
         bt_save = Button(fr_config, text="Save", font=("Arial Bold", 10), command=lambda: self.save_document_button_call())
-        bt_save.place(relx=0.08, rely=0.8, relwidth=0.04)
+        bt_save.place(relx=0.08, rely=0.76, relwidth=0.04)
         self.process_wids_dict['SaveButton'] = bt_save
 
         #def retrive_page(*args):self.retrive_page( var_cluster, var_process, var_page, var_page_index)
@@ -538,6 +543,7 @@ class ProcessStudioProcessTab:
         self.process_wids_dict['DeleteButton'] = ''
         self.process_wids_dict['RunButton'] = ''
 
+    # **
     def cluster_save_button_call(self):
         # get widgets
         fr_config = self.process_wids_dict['ConfigureFrame']
@@ -568,6 +574,7 @@ class ProcessStudioProcessTab:
             messagebox.showerror("Error",'Cluster Already Exists',parent=fr_config)
             new_cluster_entry.delete(0,END)
 
+    # **
     def process_save_button_call(self):
         # get widgets
         fr_config = self.process_wids_dict['ConfigureFrame']
@@ -601,6 +608,7 @@ class ProcessStudioProcessTab:
             messagebox.showerror("Error",'Process Already Exists',parent=fr_config)
             new_process_entry.delete(0,END)
 
+    # **
     def new_page_save_button_call(self):
         # get widgets
         fr_config = self.process_wids_dict['ConfigureFrame']
@@ -1061,16 +1069,39 @@ class ProcessStudioProcessTab:
         bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_output,win=input_window: self.ok_button_call_output_window(fr,var,win))
         bt_ok.place(relx=.86, rely=.878)
 
-    def add_row_button_call(self, ps_process_tab):
-        #define widgets in process tab
+    def add_row_button_call(self):
 
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-        fr_table.update_idletasks()
-        y_socrollbar = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
-        cn_on_fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0])
-        children_windows = fr_table.winfo_children()
-        rows_tableframe = (len(children_windows)) / 7
+        '''self.process_wids_dict = {'ConfigureFrame': '', 'TableFrame': '', 'TableCanvas': '', 'TableScrollBar': '',
+                                  'ClusetrLabel': '', 'ClusterOptionmenu': "", 'ClusterOptionmenuVar': '',
+                                  'NewClusterLbel': '', 'NewClusterEntry': '', 'NewClusterSaveButton': '',
+                                  'NewClusterCancelButton': '',
+                                  'ProcessLabel': '', 'ProcessOptionmenu': '', 'ProcessOptionmenuVar': '',
+                                  'NewProcessLabel': '', 'NewProcessEntry': '', 'NewProcessSaveButton': '',
+                                  'NewProcessCancelButton': '',
+                                  'PageLabel': '', 'PageOptionmenu': '', 'PageOptionmenuVar': '',
+                                  'NewPageLabel': '', 'NewPageEntry': '', 'NewPageSaveButton': '',
+                                  'NewPageCancelButton': '',
+                                  'PageIndexLabel': '', 'PageIndexSpinbox': '', 'PageIndexVar': '',
+                                  'StepButton': '', 'AddButton': '', 'SaveButton': '', 'DeleteButton': '',
+                                  'RunButton': ''}'''
+
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        y_socrollbar = self.process_wids_dict['TableScrollBar']
+        cn_on_fr_table = self.process_wids_dict['TableCanvas']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+
+        process_val=process_var.get()
+        if process_val=='' or process_val=="Create New Process":
+            messagebox.showerror('Error','Select Process Before Adding Row',parent=fr_config)
+            return
+
+        fr_table.update_idletasks() # update table if any widgets it stuck
+
+        children_windows = fr_table.winfo_children() #store the children widgets from table frame
+        rows_tableframe = (len(children_windows)) / 7 # store the number of rows in table frame (each widgets consist of 7 widgets
 
         # whenever checkbutton is checked, instance dictionary-check_button_dict will be updated with rows and its value
         def get_checkbutton_value(cb, var):
@@ -1125,15 +1156,16 @@ class ProcessStudioProcessTab:
             if rows_tableframe >= 1: next_row = int(rows_tableframe) + 1
 
             # create sequential label
-            lb_input = Label(fr_table, text=next_row, fg='blue', underline=1, width=3, relief=FLAT)
+            lb_input = Label(fr_table, text=next_row, fg='black', underline=1, width=3, relief=FLAT)
             lb_input.grid(row=next_row, column=1)
+            #self.process_table_var_dict['row']=next_row
 
             # create handle OptionMenu
             tem_var_list=[]
             var_handler1 = StringVar()
             chocices_handler = self.db.retrive_all_handles()
             om_handler1 = OptionMenu(fr_table, var_handler1, *chocices_handler)
-            om_handler1.config(width=38)
+            om_handler1.config(width=38,bg='snow')
             om_handler1.grid(row=next_row, column=2)
             tem_var_list.append(var_handler1)
 
@@ -1141,7 +1173,7 @@ class ProcessStudioProcessTab:
             var_action1 = StringVar()
             chocices_action = ['Dummy']
             om_action1 = OptionMenu(fr_table, var_action1, *chocices_action)
-            om_action1.config(width=38)
+            om_action1.config(width=38,bg='snow')
             om_action1.grid(row=next_row, column=3)
             tem_var_list.append(var_action1)
 
@@ -1177,6 +1209,10 @@ class ProcessStudioProcessTab:
             cbt_tbl = Checkbutton(fr_table, text="", variable=var_row_select, onvalue=1, offvalue=0, width=2)
             cbt_tbl.configure(command=lambda cb=cbt_tbl, var=var_row_select: get_checkbutton_value(cb, var))
             cbt_tbl.grid(row=next_row, column=7)
+
+            self.process_table_var_dict[next_row] = {'Handle':var_handler1,'Action':var_action1,
+                                                     'Input':var_input1,'Output':var_output1,
+                                                     'Exception':var_exception1,'RowSelect':var_row_select}
 
             # configure scrollbar
             cn_on_fr_table.config(scrollregion=cn_on_fr_table.bbox('all'), yscrollcommand=y_socrollbar.set)
@@ -1218,7 +1254,8 @@ class ProcessStudioProcessTab:
             print('var_values\n',var_values)
 
 
-            self.var_table=[]
+            self.var_table=[] #store variables of the row as list
+            self.process_table_var_dict={} #store variables of the row by rows
 
             # destory all the widgets in table
             for each in children_windows:
@@ -1232,7 +1269,7 @@ class ProcessStudioProcessTab:
                 next_row+=1
 
                 # create label for sequence
-                lb_input = Label(fr_table, text=loop_count, fg='blue', underline=1, width=3, relief=FLAT)
+                lb_input = Label(fr_table, text=loop_count, fg='black', underline=1, width=3, relief=FLAT)
                 lb_input.grid(row=next_row, column=1)
 
                 # create OptionMenu for handler
@@ -1241,7 +1278,7 @@ class ProcessStudioProcessTab:
                 var_handler.set(each[0])
                 chocices_handler = self.db.retrive_all_handles()
                 om_handler = OptionMenu(fr_table, var_handler , *chocices_handler)
-                om_handler.config(width=38)
+                om_handler.config(width=38,bg='snow')
                 om_handler.grid(row=next_row, column=2)
                 tem_var_list.append(var_handler )
 
@@ -1250,7 +1287,7 @@ class ProcessStudioProcessTab:
                 var_action.set(each[1])
                 chocices_action = ['Dummy']
                 om_action = OptionMenu(fr_table, var_action, *chocices_action)
-                om_action .config(width=38)
+                om_action .config(width=38,bg='snow')
                 om_action .grid(row=next_row, column=3)
                 # self.var_table.append(var_action)
                 tem_var_list.append(var_action)
@@ -1298,6 +1335,11 @@ class ProcessStudioProcessTab:
                 cbt_tbl.configure(command=lambda cb=cbt_tbl, var=var_row_select: get_checkbutton_value(cb, var))
                 cbt_tbl.grid(row=next_row, column=7)
 
+                # store variables of the row by rows
+                self.process_table_var_dict[next_row] = {'Handle': var_handler, 'Action': var_action,
+                                                         'Input': var_input, 'Output': var_output,
+                                                         'Exception': var_exception, 'RowSelect': var_row_select}
+
                 # configure scrollbar
                 cn_on_fr_table.config(scrollregion=cn_on_fr_table.bbox('all'), yscrollcommand=y_socrollbar.set)
                 y_socrollbar.config(command=cn_on_fr_table.yview)
@@ -1305,11 +1347,14 @@ class ProcessStudioProcessTab:
 
                 # trace handler
                 var_handler.trace_variable('w',lambda m,n,o,x=om_action, y=var_action, z=var_handler, a=var_input,b=var_output,c=lb_input:refresh_handle_om(x,y,z,a,b,c))
-                print('var table:\n', self.var_table)
+
 
         # mark all the checkbutton values btaken to dictionary as 0
         for each in self.check_button_dict:
             self.check_button_dict[each] = 0
+
+        print('var table:\n', self.var_table)
+        print('var table dictionary:\n', self.process_table_var_dict)
 
     def del_row_button_call(self, ps_process_tab):
 
