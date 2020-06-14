@@ -6,7 +6,7 @@ from PIL import ImageTk, Image
 import time
 
 #import files
-import Database, ObjectStudio, ProcessStudio,ProcessStudio1
+import Database, ObjectStudio, ProcessStudio,ProcessStudio1,HandlerStudio
 
 class Main:
 
@@ -284,7 +284,7 @@ class Main:
 
         # Make 1st tab
         object_studio_frame_tab = Frame(nb) # Create a frame -object_studio_frame_tab which needs to be added as tab in note book
-        nb.add(object_studio_frame_tab, text="Object Studio") # Add the frame -object_studio_frame_tab as a tab in notebook
+        nb.add(object_studio_frame_tab, text="Handle Studio") # Add the frame -object_studio_frame_tab as a tab in notebook
 
         # Make 2nd tab
         process_studio_frame_tab = Frame(nb)# Create a frame -process_studio_frame_tab which needs to be added as tab in note book
@@ -298,11 +298,22 @@ class Main:
         process_studio_notebook = ttk.Notebook(process_studio_frame_tab)
         process_studio_notebook.place(relx=0.01, rely=0.01, relheight=0.98, relwidth=0.98)
 
-        os=ObjectStudio.ObjectStudio(root,db,object_studio_notebook) # Create ObjectStudio object
+        #os=ObjectStudio.ObjectStudio(root,db,object_studio_notebook) # Create ObjectStudio object
+        #os = HandlerStudio.ObjectStudio(root, db, object_studio_notebook)  # Create ObjectStudio object
         ps = ProcessStudio1.ProcessStudio(process_studio_notebook, db) # Create ProcessStudio object
+        ps.process_studio()
 
-        os.object_studio() # Call object_studio function
-        ps.process_studio() # call process_studio function
+        primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+
+        code = HandlerStudio.Code(object_studio_notebook,primary_db,secondary_db)
+        code.handler_studio()
+        code.module_tab_gui()
+        code.input_tab_gui()
+        code.output_tab_gui()
+        code.code_tab_gui()
+        #os.object_studio() # Call object_studio function
+        #ps.process_studio() # call process_studio function
 
 
 main= Main()

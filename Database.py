@@ -360,7 +360,7 @@ class database:
         return process_doc
 
     #**
-    def create_new_process_page_in_primary_databse(self,type,cluster,process,page,pageindex,steps,outputstorein):
+    def create_new_process_page_in_primary_databse(self,type,cluster,process,page,pageindex,table,output):
         #print('page is'+page)
         try:
             # Derive key for page document.
@@ -370,8 +370,8 @@ class database:
                 "%f") + "-P"  # Create a key .Ex: 20200517022446831446-P . here process doc will end with -P
 
             self.p_process_table.insert({'key': key, 'type': type, 'cluster': cluster, 'process': process,
-                                         'page': page, 'pageindex': pageindex, 'steps': steps,
-                                         'outputstorein': outputstorein})
+                                         'page': page, 'pageindex': pageindex, 'table': table,
+                                         'output': output})
             return "Success", 'Cluster/Process/Pages Saved'
 
         except Exception as e:
@@ -392,4 +392,22 @@ class database:
             messagebox.showerror("Error", "Error in updating Cluster/Process/Page as: " + str(e), parent=frame)
 
 
+    #**
+    def retrive_latest_page_doc(self,cluster,process,page):
+        query = Query()
+        page_doc = self.p_process_table.search((query.type == 'process')
+                                               & (query.cluster == cluster) & (query.process == process) & (query.page == page))
 
+        key_list = []  # Create a list to store all the keys of the actions
+        for each_doc in page_doc:
+            key_list.append(each_doc['key'])  # append the keys of the actions documnts into key_list
+        key_list.sort(reverse=True)  # sort the key list in desending order
+        # print(key_list)
+
+        key = key_list[0]  # #take the first key in the list as the lates key
+
+        latest_page_docs = self.p_process_table.search((query.type == 'process')
+                                               & (query.cluster == cluster) & (query.process == process) & (query.page == page)  & (query.key == key))
+
+        latest_page_doc=latest_page_docs[0]
+        return latest_page_doc

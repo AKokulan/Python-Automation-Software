@@ -12,7 +12,7 @@ import ProcessStudio
 
 class MainWindow:
 
-    def __init__(self, primary_db,secondary_db):
+    def __init__(self):
         self.num_rows = 4
         self.primary_db = primary_db
         self.secondary_db = secondary_db
@@ -88,9 +88,11 @@ class MainWindow:
 
         #self.object_studio(object_studio_notebook)'''
 
-class HandlerStudio(MainWindow):
+class HandlerStudio():
 
     def __init__(self,handler_studio_notebook):
+        #self.primary_db = primary_db
+        #self.secondary_db = secondary_db
         self.x=100
         self.handler_studio_notebook=handler_studio_notebook
         self.hs_tab_wids_dict = {'ModuleTab': '', 'InputTab': '', 'OutputTab': '','CodeTab': ''} # store all the tabs widgets into a session variable
@@ -145,9 +147,9 @@ class Module(HandlerStudio):
         super().__init__(handler_studio_notebook)
         self.row_num_in_module_tbl=1
         print("x is : ",self.x)
-        primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        self.db_m = Database.database(primary_db, secondary_db)
+        self.primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        self.secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        self.db_m = Database.database(self.primary_db, self.secondary_db)
 
     def module_tab_gui(self):
         hs_tab_wids_dict=self.hs_tab_wids_dict # store tabs widgets inherited from HandlerStudio Class
@@ -291,7 +293,7 @@ class Module(HandlerStudio):
             messagebox.showinfo('Success', 'All modules successfuly validated', parent=frame)
 
     def module_handle_refresh_call(self):
-        self.db_m = Database.database(primary_db, secondary_db)
+        self.db_m = Database.database(self.primary_db, self.secondary_db)
         parameter_frame=self.module_wids_dict['ParameterFrame']
         handle_var = self.module_wids_dict['HandleVar']
         #value=handle_var.get()
@@ -361,7 +363,7 @@ class Module(HandlerStudio):
         self.clear_table()
 
     def module_action_refresh_call(self):
-        self.db_m = Database.database(primary_db, secondary_db)
+        self.db_m = Database.database(self.primary_db, self.secondary_db)
         #store widgets in module
         parameter_frame = self.module_wids_dict['ParameterFrame']
         action_var = self.module_wids_dict['ActionVar']
@@ -1040,11 +1042,11 @@ class Output(Input):
 
 class Code(Output):
 
-    def __init__(self,handler_studio_notebook):
+    def __init__(self,handler_studio_notebook,primary_db,secondary_db):
         super().__init__(handler_studio_notebook)
         #self.db=self.database
-        primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        self.primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        self.secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
         db = Database.database(primary_db, secondary_db)
 
     def code_tab_gui(self):
@@ -1142,6 +1144,8 @@ class Code(Output):
                            "\n\tfor each in outcome_dict:\n\t\toutcome_dict[each] = outcome[loop_count]" \
                            "\n\t\tloop_count+=1\n\tmessagebox.showinfo('Result',outcome_dict,parent=self.handler_studio_notebook)"
 
+        # add try block in manin script
+        script_TryPortion = "\ntry:\n\toutcome = function()\n\tif len(str(outcome))>0:\n\t\tif 'int' in  str(type(outcome))  or 'str' in  str(type(outcome)):\n\t\t\toutcome=[outcome]\n\tloop_count = 0 \n\tfor each in outcome_dict:\n\t\t\toutcome_dict[each] = outcome[loop_count]\n\t\t\tloop_count += 1\n\tmessagebox.showinfo('Result', outcome_dict,parent=self.handler_studio_notebook)"
 
         #add exception block in main script
         script_ExceptionPortion="\nexcept Exception as e:\n\terror='Error: Error in running the action as:'" + '+ str(e)' \
@@ -1273,6 +1277,8 @@ class Code(Output):
         return code_dict
 
     def code_save_button_call(self):
+        db = Database.database(self.primary_db, self.secondary_db)
+
         hs_tab_wids_dict = self.hs_tab_wids_dict  # store tabs widgets inherited from HandlerStudio Class
         code_tab = hs_tab_wids_dict['CodeTab']  # store code tab widget
         table_frame = self.module_wids_dict['TableFrame'] # store frame to show message
@@ -1330,8 +1336,8 @@ class Code(Output):
                     messagebox.showinfo('Success', message, parent=table_frame)
 
 
-primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-db=Database.database(primary_db,secondary_db)
-main=MainWindow(primary_db,secondary_db)
-main.main_frame()
+#primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+#secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+#db=Database.database(primary_db,secondary_db)
+#main=MainWindow(primary_db,secondary_db)
+#main.main_frame()

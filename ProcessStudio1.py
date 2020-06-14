@@ -6,6 +6,7 @@ import os,shutil
 from datetime import datetime
 import tkinter
 import re
+import json
 
 import Database
 import GuiGloballVariable
@@ -17,6 +18,9 @@ class ProcessStudio:
         self.root=100
         self.process_table_var_dict={} #store the variable of the table by rows
 
+        self.test={}
+        self.storein_output_dict = {}
+        self.process_val_dict = {}
 
     def process_studio(self):
         # Make 1st tab
@@ -36,9 +40,9 @@ class ProcessStudio:
 
 
         output_tab=ProcessStudioOutputTab(self.process_studio_notebook,self.db,process_studio_output_tab)
-        output_tab.output_tab(process_studio_output_tab)
+        outputtab_table_frame=output_tab.output_tab(process_studio_output_tab)
 
-        process_tab=ProcessStudioProcessTab(self.process_studio_notebook,self.db,process_studio_output_tab,output_tab)
+        process_tab=ProcessStudioProcessTab(self.process_studio_notebook,self.db,process_studio_output_tab,outputtab_table_frame)
         process_tab.process_tab(process_studio_process_tab)
         '''def callback_process_studio_output_tab():
             print("clciked on process tab")
@@ -48,18 +52,22 @@ class ProcessStudio:
 
         process_studio_process_tab.bind("<Button-1>", callback_process_studio_output_tab)'''
 
-class ProcessStudioProcessTab:
 
-    def __init__(self,process_studio_notebook,database,process_studio_output_tab,output_tab_instance):
+
+class ProcessStudioProcessTab(ProcessStudio):
+
+    def __init__(self,process_studio_notebook,database,process_studio_output_tab,outputtab_table_frame):
+        super().__init__(process_studio_notebook,database)
         self.process_studio_notebook=process_studio_notebook
         self.db=database
         #self.root=100
-        self.check_button_dict = {}
-        self.var_table=[]
         self.process_studio_output_tab=process_studio_output_tab
-        self.output_tab_instance=output_tab_instance
+        self.outputtab_table_frame=outputtab_table_frame
         #self.process_tab=ProcessStudioOutputTab(process_studio_notebook,database)
-        self.process_table_var_dict = {}  # store the variable of the table by rows
+
+
+        self.check_button_dict = {} # #create dictionary to store rownumber as o/1 for whther row is selected or not in table
+        self.var_table=[] # creare list to store all the variabeles from table as a list
 
         self.step_output_dict={} # output value dictonary for step. Dic will be cleared with refresh button call
 
@@ -72,6 +80,7 @@ class ProcessStudioProcessTab:
         self.process_om_var_val = "" #store value selected in process option menu with --create_new_process_om_call
         self.page_om_var_val = "" #store value selected in page option menu with --create_new_page_om_call
 
+        #create dictionary to store all the needed widgets in proces stab
         self.process_wids_dict ={'ConfigureFrame':'','TableFrame':'','TableCanvas':'','TableScrollBar':'',
                                  'ClusetrLabel':'','ClusterOptionmenu':"",'ClusterOptionmenuVar':'' ,
                                  'NewClusterLbel':'','NewClusterEntry':'','NewClusterSaveButton':'','NewClusterCancelButton':'',
@@ -81,6 +90,27 @@ class ProcessStudioProcessTab:
                                  'NewPageLabel':'','NewPageEntry':'','NewPageSaveButton':'','NewPageCancelButton':'',
                                  'PageIndexLabel':'','PageIndexSpinbox':'','PageIndexVar':'',
                                  'StepButton':'','AddButton':'','SaveButton':'','DeleteButton':'','RunButton':''}
+
+        self.process_table_var_dict = {}  # store the variable of the table by rows ex: {1:{'handle':xx,'Action'
+        self.process_table_val_dict = {}  # store the variable of the table by rows ex: {1:{'handle':xx,'Action'
+
+        # store all the variable releated to a process in dict. From this value can be obtained to update the database
+        self.process_var_dict = {'Cluster': self.process_wids_dict['ClusterOptionmenuVar'],
+                                 'Process': self.process_wids_dict['ProcessOptionmenuVar'],
+                                 'Page': self.process_wids_dict['PageOptionmenuVar'],
+                                 'PageIndex': self.process_wids_dict['PageIndexVar'],
+                                 'Table': self.process_table_var_dict, 'Output': ''}
+
+        # store all the values to a process in dict. this dictonary can be used to
+        self.process_val_dict = {'Cluster': '',
+                                 'Process': '',
+                                 'Page': '',
+                                 'PageIndex': '',
+                                 'Table': '', 'Output': ''}
+
+
+        #store dictionaries of storein key and values by page .Ex: {'Page1':{'outputname':xx,'storeinkey'}};
+        self.storein_output_dict={}
 
     def process_tab(self,process_studio_process_tab):
         main_frame=Frame(process_studio_process_tab,bg='snow')
@@ -214,6 +244,10 @@ class ProcessStudioProcessTab:
         bt_run.place(relx=0.04, rely=0.76, relwidth=0.04)
         self.process_wids_dict['RunButton'] = bt_step
 
+        bt_refresh = Button(fr_config, text="Refresh", font=("Arial Bold", 10), command=lambda: self.refresh_button_call())
+        bt_refresh.place(relx=0.12, rely=0.76, relwidth=0.05)
+        self.process_wids_dict['RefreshButton'] = bt_refresh
+
 
         bt_add_row = Button(fr_config, text="Add",command=lambda  : self.add_row_button_call(), font=("Arial Bold", 10))
         bt_add_row.place(relx=0.92, rely=0.76, relwidth=0.04)
@@ -222,6 +256,7 @@ class ProcessStudioProcessTab:
         bt_del_row = Button(fr_config, text="Del", font=("Arial Bold", 10),command=lambda  : self.del_row_button_call())
         bt_del_row.place(relx=0.96, rely=0.76, relwidth=0.04)
         self.process_wids_dict['AddButton'] = bt_add_row
+
 
         lb_new_page = Label(fr_config, text="Page Index:",font=("Arial Bold", 10),anchor="w")
         lb_new_page.place(relx=0.66, rely=0.35, relwidth=0.07)
@@ -242,7 +277,7 @@ class ProcessStudioProcessTab:
         bt_save.place(relx=0.08, rely=0.76, relwidth=0.04)
         self.process_wids_dict['SaveButton'] = bt_save
 
-        #def retrive_page(*args):self.retrive_page( var_cluster, var_process, var_page, var_page_index)
+        #def retrive_page(*args):self.retrive_page_doc()
         #var_page.trace("w", retrive_page)
 
     #**
@@ -464,7 +499,7 @@ class ProcessStudioProcessTab:
             page_var.set("")
             return
 
-
+        print('self.page_om_var_val: ',self.page_om_var_val)
         if self.page_om_var_val != "" and self.page_om_var_val != "Create New Page":
             MsgBox = messagebox.askquestion('Warning',
                                             'Are you sure you want to exit from current page? Unsaved values will be lost!',
@@ -473,8 +508,12 @@ class ProcessStudioProcessTab:
                 page_var.set(self.page_om_var_val)
                 return
 
-        self.page_om_var_val = page_val
+        # destory all the widgets in table frame
+        children_windows_fr_tbl = fr_table.winfo_children()
+        for each in children_windows_fr_tbl:
+            each.destroy()
 
+        self.page_om_var_val = page_val
         children_windows=fr_config.winfo_children()
         if page_val=="Create New Page":
             self.destory_widgets_for_new_page_call()
@@ -502,8 +541,11 @@ class ProcessStudioProcessTab:
             self.process_wids_dict['NewPageCancelButton'] = bt_new_process_cancel
 
         else:
+            self.var_table=[]
+            self.retrive_page_doc()
             # var_value = var.get()
-            self.process_tab_config_frame_gui()
+            #self.process_tab_config_frame_gui()
+            storein_dict = {}
 
         print("variables list for the widgets added in process table in --create_new_page_om_call: ", self.var_table)
 
@@ -559,7 +601,7 @@ class ProcessStudioProcessTab:
         #check if the cluster already exists and if not exist perform the below activity
         if new_cluster_value not in clusters:
             result,message=self.db.create_new_process_page_in_primary_databse(type='process',cluster=new_cluster_value,process='#NA',
-                                                               page='#NA',pageindex=1,steps="#NA",outputstorein="#NA")
+                                                               page='#NA',pageindex=1,table="#NA",output="#NA")
 
             if result=='Error':
                 messagebox.showerror(result,message,parent=fr_config)
@@ -594,8 +636,8 @@ class ProcessStudioProcessTab:
             result, message = self.db.create_new_process_page_in_primary_databse(type='process',
                                                                                  cluster=cluster_val,
                                                                                  process=new_process_value,
-                                                                                 page='#NA', pageindex=1, steps="#NA",
-                                                                                 outputstorein="#NA")
+                                                                                 page='#NA', pageindex=1, table="#NA",
+                                                                                 output="#NA")
 
             if result == 'Error':
                 messagebox.showerror(result, message, parent=fr_config)
@@ -631,8 +673,8 @@ class ProcessStudioProcessTab:
             result, message = self.db.create_new_process_page_in_primary_databse(type='process',
                                                                                  cluster=val_var_cluster,
                                                                                  process=val_var_process,
-                                                                                 page=new_page_value, pageindex=1, steps="#NA",
-                                                                                 outputstorein="#NA")
+                                                                                 page=new_page_value, pageindex=1, table="#NA",
+                                                                                 output="#NA")
 
             if result == 'Error':
                 messagebox.showerror(result, message, parent=fr_config)
@@ -645,445 +687,56 @@ class ProcessStudioProcessTab:
             messagebox.showerror("Error",'Page Already Exists',parent=fr_config)
             new_page_entry.delete(0,END)
 
-    def process_input_window(self,fr_table,handle_var,action_var,var_input,next_row):
-
-        #derive widgets in output tab
-        fr_config_output = (self.process_studio_output_tab.winfo_children())[0]
-        fr_table_output = (((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-        fr_table_output.update_idletasks()
-        y_socrollbar_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
-        cn_on_fr_table_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0])
-        children_windows_tbl_output=fr_table_output.winfo_children()
-
-        # create TopLevel window for input
-        input_window=Toplevel(self.process_studio_notebook)
-        input_window.title('Input')
-        input_window.geometry("800x400")
-
-        # create table frame
-        fr_input_table=Frame(input_window,bg='snow')
-        fr_input_table.place(relx=.025, rely=.025, relwidth=.71, relheight=.9)
-
-        # create listbox for output
-        fr_output_var_listbox = Frame(input_window, bg='snow')
-        fr_output_var_listbox.place(relx=.75, rely=.1, relwidth=.24, relheight=.75)
-
-        # create optionMenu for variables
-        var_output_option=StringVar()
-        var_output_option.set('Output Variable')
-        choices_output=['Output Variable','Application Moduler Variable','Global Variable']
-        om_output_var_options=OptionMenu(input_window,var_output_option,*choices_output)
-        om_output_var_options.place(relx=.75, rely=.025, relwidth=.24)
-
-        cn_input_table=Canvas(fr_input_table) # create Canvas on table frame
-        sb_input_table=Scrollbar(fr_input_table,orient="vertical",command=cn_input_table.yview) # create Scrollbar on table frame
-        fr_cn_input_table=Frame(cn_input_table) # create frame on table Canvas
-
-        # create header table for table frame
-        lb_input_name=Label(fr_cn_input_table,text="Input Name", font=("Arial Bold", 10), bg='gray87', width=22,relief=GROOVE).grid(row=1,column=1)
-        lb_input_value = Label(fr_cn_input_table, text="Input Value", font=("Arial Bold", 10), bg='gray87', width=43,relief=GROOVE).grid(row=1, column=2)
-        lb_input_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=3)
-
-        # format input to disply in input window
-        input=str(var_input.get())
-        if input!='Input':
-            input,inputname,input_value=self.format_input(input)
-        else:
-            input, inputname, input_value = '','',''
-
-
-        # place input name and value in window
-        r=2
+    #**
+    def refresh_button_call(self):
+        process=self.process_wids_dict['ProcessOptionmenuVar'].get() #store the process name
+        children_windows=self.outputtab_table_frame.winfo_children() #children widgets from output tab table frame
         loop_count=0
-        for each in range(len(inputname)):
-            var_input_name=StringVar()
-            var_input_name.set(inputname[loop_count])
-            lb_input_name_vale = Label(fr_cn_input_table, textvariable=var_input_name, font=("Arial", 10), bg='gray87', width=22).grid(row=r, column=1)
-            var_ent=StringVar()
-            var_ent.set(input_value[loop_count])
-            et_input_value_val=Entry(fr_cn_input_table, width=58,textvariable=var_ent)
-
-            et_input_value_val.grid(row=r, column=2)
-            et_input_value_val.bind('<Button-3>', lambda var_ent=var_ent: self.update_input_value_entrybox(var_ent))
-            #et_input_value_val.configure(command=lambda ent=et_input_value_val: self.update_input_value_entrybox(ent,var_ent))
-            bt_input_validate = Button(fr_cn_input_table, text="", bg='gray87', width=1)
-            bt_input_validate.grid(row=r, column=3)
-            bt_input_validate.configure(command=lambda bt=bt_input_validate,ent=et_input_value_val,fr=fr_input_table, :self.input_row_validate_button_call(bt,ent,fr))
-            r+=1
-            loop_count+=1
-
-
-        cn_input_table.create_window(0, 0, anchor = 'nw', window = fr_cn_input_table)
-        cn_input_table.update_idletasks()
-
-        # configure scrollbar
-        cn_input_table.configure(scrollregion=cn_input_table.bbox('all'), yscrollcommand=sb_input_table.set)
-        cn_input_table.pack(side='left', expand=True, fill='both')
-        sb_input_table.pack(side='right', fill='both')
-        sb_variable_listbox = Scrollbar(fr_output_var_listbox)
-        sb_variable_listbox.pack(side=RIGHT, fill=Y)
-
-        # Create listbox for variable
-        lb_var = Listbox(fr_output_var_listbox)
-        lb_var.pack(side='left',fill='both',expand=True)
-
-
-        # read all the ourput variable name from output tab
-        def update_listbox_for_output_variable(*args):
-            if var_output_option.get()=='Output Variable':
-                output_var=[]
-                loop_count=0
-                ent_box_count=0
-                for each in children_windows_tbl_output:
-                    print(each)
-                    if each.winfo_class()=='Entry':
-                        print(each.get())
-                        ent_box_count+=1
-                        if ent_box_count%2>0:
-                            output_var.append(each.get())
-
-                # insert all the output variable name into listbox
-                lb_var.delete(0,END)
-                for each in output_var:
-                    lb_var.insert(END, each)
-            else:
-                lb_var.delete(0, END)
-
-        update_listbox_for_output_variable() #when open output window first time, update the output variable names in listbox
-        var_output_option.trace_variable('w',update_listbox_for_output_variable) #when the value is select as output variable in OptionMenu, update listbox
-
-
-
-        # attach listbox to scrollbar
-        lb_var.config(yscrollcommand=sb_variable_listbox.set)
-        sb_variable_listbox.config(command=lb_var.yview)
-
-        lb_var.bind('<<ListboxSelect>>', self.lb_onselect) #bind the item listbox to right click
-
-        # place ok button which will update the input label in the table and close the output window
-        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_input,win=input_window: self.ok_button_call_input_window(fr,var,win))
-        bt_ok.place(relx=.86, rely=.878)
-
-    def lb_onselect(self,evt):
-        # Note here that Tkinter passes an event object to onselect()
-        w = evt.widget
-        index = int(w.curselection()[0])
-        global input_lb_selected_value
-        input_lb_selected_value = (w.get(index))
-        print('You selected item %d: "%s"' % (index, input_lb_selected_value))
-
-    def update_input_value_entrybox(self,var_ent):
-        print(var_ent)
-        var_evt=var_ent.widget
-        len_val=(len(var_evt.get()))+2
-
-        #var_evt.delete(0,END)
-        text="&" + str(input_lb_selected_value) + "&"
-        print(text)
-        var_evt.insert(len_val,text)
-
-
-    def input_row_validate_button_call(self, button, input_value_entry, frame):
-        print(button)
-        print(input_value_entry)
-        # print(input_value_entry.get())
-        # str="print(input_value_entry.get())"
-        try:
-            text = input_value_entry.get()
-            if len(text) > 0:
-                print("value taken")
-                value = str(eval(input_value_entry.get()))
-            if len(text) == 0: value = 'None'
-            string = "messagebox.showinfo('Input Value',message=value,parent=frame)"
-            exec(string)
-        except Exception as e:
-            error = "Error: " + str(e)
-            string = "messagebox.showerror('Input Value',message=error,parent=frame)"
-            exec(string)
-
-    def format_input(self,input):
-        input_retrived = input
-
-        input, input_name, input_value = list(), list(), list()
-        for each_input in (input_retrived.split("\n")):
-            if len(each_input) != 0:
-                input_name_value_splitted = (each_input.replace("\t", "")).split("=")
-                #print(input_name_value_splitted)
-                input.append(each_input.replace("\t", ""))
-                input_name.append(input_name_value_splitted[0])
-
-                nums = ['.', '1', '2', '3', '4', '5', '6', '7', '8', '9,', '0']
-                isNum = True
-
-                x = 1 if len(input_name_value_splitted) > 1 else 0
-                for each in input_name_value_splitted[x]:
-                    if each not in nums: isNum = False
-                if isNum == True:
-                    if "." in input_name_value_splitted[1]: input_value.append(float(input_name_value_splitted[x]))
-                    if "." not in input_name_value_splitted[1]: input_value.append(int(input_name_value_splitted[x]))
-
-                else:
-
-                    if input_name_value_splitted[x]!='str()':
-                        input_value.append(input_name_value_splitted[x])
-                    else:
-                        input_value.append('')
-                    # print(input_name_value_splitted[1])
-        return input, input_name, input_value
-
-    def ok_button_call_input_window(self,fr,var,win):
-        input_name,input_value,input=list(),list(),''
-        children_windows=fr.winfo_children()
-        loop_count=0
+        active_row=True
+        row=1
+        table_dict={}
+        #loop all the widgets in output tab table frame and add ther rows in self.storein_output_dict
         for each in children_windows:
-            loop_count+=1
-            #print(each.winfo_class)
-            if each.winfo_class()=='Label' and loop_count>3:
-                #print(each.cget("text"))
-                input_name.append(each.cget("text")) if len(each.cget("text")) >0 else input_name.append(each.cget("text"))
-                #input_name.append(each.cget("text"))
-            if each.winfo_class() == 'Entry':
-                if len(each.get()) > 0:
-                    input_value.append(each.get())
-                else:
-                    input_value.append('str()')
+            if active_row==True:
+                table_dict[row] = {'Key':children_windows[loop_count+1].get(),'Value':children_windows[loop_count+2].get()}
 
-
-        if len(input_name)>0:
-            for each in range(len(input_name)):
-                input= input + '\n\t' + input_name[each] + '=' + input_value[each]
-
-        var.set(input)
-        win.destroy()
-        print(input)
-
-    def ok_button_call_output_window(self, fr, var, win):
-        output_name, output_value,storein, output = list(), list(),list(), ''
-        children_windows = fr.winfo_children()
-        loop_count = 0
-        ent_count=0
-        for each in children_windows:
-            loop_count += 1
-            # print(each.winfo_class)
-            if each.winfo_class() == 'Label' and loop_count > 4:
-                # print(each.cget("text"))
-                output_name.append(each.cget("text"))
-            if each.winfo_class() == 'Entry':
-                ent_count+=1
-                if ent_count%2>0:
-                    if len(each.get())>0:storein.append(each.get())
-                    if len(each.get()) == 0: storein.append('&dummy&')
-                if ent_count % 2 == 0:
-                    if len(each.get())>0:output_value.append(each.get())
-                    if len(each.get()) == 0: output_value.append('str()')
-
-        if len(output_name) > 0:
-            for each in range(len(output_name)):
-                output = output + '\n\t' + output_name[each] + '=' + storein[each]  + '=' +  output_value[each]
-
-        var.set(output)
-        win.destroy()
-        print(output)
-
-
-    def format_output(self,output_list):
-        output_retrived = output_list
-        print('input_retrived\n',output_retrived)
-        output, output_name, output_value,storein = list(), list(), list(),list()
-        # print(input_retrived.split("\n"))
-        for each_output in (output_retrived.split("\n")):
-            if len(each_output) != 0:
-                output_name_value_splitted = (each_output.replace("\t", "")).split("=")
-                print('output_name_value_splitted: ',output_name_value_splitted)
-                output.append(each_output.replace("\t", ""))
-                output_name.append(output_name_value_splitted[0])
-                if len(output_name_value_splitted)>1:
-                    if output_name_value_splitted[1]!='&dummy&':storein.append(output_name_value_splitted[1])
-                    if output_name_value_splitted[1] == '&dummy&': storein.append('')
-
-
-                nums = ['.', '1', '2', '3', '4', '5', '6', '7', '8', '9,', '0']
-                isNum = True
-
-                x = 2 if len(output_name_value_splitted) > 1 else 0 #derive the position of the output value
-                if output_name_value_splitted[x].strip() !=None:
-                    print("output value is not  ''")
-                    for each in output_name_value_splitted[x]: # check whether the ourput value is a num of text
-                        if each not in nums : isNum = False
-                if isNum == True: # do below activity if the output value is number
-                    if "." in output_name_value_splitted[x]: output_value.append(float(output_name_value_splitted[x])) # if output value consit of '.', the append it as a float
-                    if "." not in output_name_value_splitted[x]: output_value.append(int(output_name_value_splitted[x])) # if output value doesnot consist of '.', the append it as a int
-
-                else:
-                    if output_name_value_splitted[x]!='str()':output_value.append(output_name_value_splitted[x]) # append output value as text
-                    if output_name_value_splitted[x] == 'str()': output_value.append('')  # append output value as text
-                    # print(input_name_value_splitted[1])
-        return output, output_name, output_value,storein
-
-    def process_output_window(self,fr_table,handle_var,action_var,var_output,next_row):
-        #derive widgets in output tab
-        fr_config_output = (self.process_studio_output_tab.winfo_children())[0]
-        fr_table_output = (((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-        fr_table_output.update_idletasks()
-        y_socrollbar_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
-        cn_on_fr_table_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0])
-        children_windows_tbl_output=fr_table_output.winfo_children()
-
-
-        print('next row is',next_row)
-        print("in toplevel window")
-        input_window=Toplevel(self.process_studio_notebook)
-        input_window.title('Output')
-        input_window.geometry("800x400")
-
-
-
-        fr_output_table=Frame(input_window,bg='snow')
-        fr_output_table.place(relx=.025, rely=.025, relwidth=.71, relheight=.9)
-
-        fr_output_var_listbox = Frame(input_window, bg='snow')
-        fr_output_var_listbox.place(relx=.75, rely=.1, relwidth=.24, relheight=.75)
-
-        var_output_option=StringVar()
-        var_output_option.set('Output Variable')
-        choices_output=['Output Variable','Application Moduler Variable','Global Variable']
-        om_output_var_options=OptionMenu(input_window,var_output_option,*choices_output)
-        om_output_var_options.place(relx=.75, rely=.025, relwidth=.24)
-
-
-
-        cn_output_table=Canvas(fr_output_table)
-        sb_output_table=Scrollbar(fr_output_table,orient="vertical",command=cn_output_table.yview)
-
-        fr_cn_input_table=Frame(cn_output_table)
-
-
-        lb_output_name=Label(fr_cn_input_table,text="Output Name", font=("Arial Bold", 10), bg='gray87', width=22,relief=GROOVE).grid(row=1,column=1)
-        lb_output_storein = Label(fr_cn_input_table, text="Store In", font=("Arial Bold", 10), bg='gray87', width=18,relief=GROOVE).grid(row=1, column=2)
-        #lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=3)
-        lb_output_value = Label(fr_cn_input_table, text="Output Value", font=("Arial Bold", 10), bg='gray87', width=30,relief=GROOVE).grid(row=1, column=3)
-        lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=4)
-
-        #input=self.db.retrive_input_for_action(handle_var.get(),action_var.get())
-        print('printing input\n',var_output.get())
-        output=str(var_output.get())
-        if output!='Output':
-            output, output_name, output_value,storein=self.format_output(output)
-        else:
-            output, output_name, output_value, storein = '','','',''
-        print(output, output_name, output_value,storein)
-
-        r=2
-        loop_count=0
-        for each in range(len(output_name)):
-            var_input_name=StringVar()
-            var_input_name.set(output_name[loop_count])
-            lb_input_name_vale = Label(fr_cn_input_table, textvariable=var_input_name, font=("Arial", 10), bg='gray87', width=22).grid(row=r, column=1)
-
-            var_storein = StringVar()
-            var_storein.set(storein[loop_count])
-            #var_storein.set(input_value[loop_count])
-            et_storein = Entry(fr_cn_input_table, width=24, textvariable=var_storein)
-            et_storein.bind('<Button-3>', lambda var_ent=var_storein: self.update_input_value_entrybox(var_ent))
-            et_storein.grid(row=r, column=2)
-
-            var_ent=StringVar()
-            var_ent.set(output_value[loop_count])
-            et_input_value_val=Entry(fr_cn_input_table, width=40,textvariable=var_ent)
-            et_input_value_val.grid(row=r, column=3)
-
-            #et_input_value_val.configure(command=lambda ent=et_input_value_val: self.update_input_value_entrybox(ent,var_ent))
-            bt_input_validate = Button(fr_cn_input_table, text="", bg='gray87', width=1)
-            bt_input_validate.configure(command=lambda bt=bt_input_validate,ent=et_input_value_val,fr=cn_output_table, :self.input_row_validate_button_call(bt,ent,fr))
-            bt_input_validate.grid(row=r, column=4)
-
-            r+=1
+            #active_row=True if loop_count%2==0 else False
             loop_count+=1
 
-        cn_output_table.create_window(0, 0, anchor = 'nw', window = fr_cn_input_table)
-
-        cn_output_table.update_idletasks()
-
-        cn_output_table.configure(scrollregion=cn_output_table.bbox('all'), yscrollcommand=sb_output_table.set)
-        cn_output_table.pack(side='left', expand=True, fill='both')
-        cn_output_table.pack(side='right', fill='both')
-
-
-
-        sb_variable_listbox = Scrollbar(fr_output_var_listbox)
-        sb_variable_listbox.pack(side=RIGHT, fill=Y)
-
-        lb_var = Listbox(fr_output_var_listbox)
-        lb_var.pack(side='left',fill='both',expand=True)
-
-        # read all the ourput variable name from output tab
-        def update_listbox_for_output_variable(*args):
-            if var_output_option.get() == 'Output Variable':
-                output_var = []
-                loop_count = 0
-                ent_box_count = 0
-                for each in children_windows_tbl_output:
-                    print(each)
-                    if each.winfo_class() == 'Entry':
-                        print(each.get())
-                        ent_box_count += 1
-                        if ent_box_count % 2 > 0:
-                            output_var.append(each.get())
-
-                # insert all the output variable name into listbox
-                lb_var.delete(0, END)
-                for each in output_var:
-                    lb_var.insert(END, each)
+            if loop_count !=0 and loop_count % 4 == 0:
+                active_row = True
+                row+=1
             else:
-                lb_var.delete(0, END)
+                active_row = False
 
-        update_listbox_for_output_variable()  # when open output window first time, update the output variable names in listbox
-        var_output_option.trace_variable('w',
-                                         update_listbox_for_output_variable)  # when the value is select as output variable in OptionMenu, update listbox
+        self.storein_output_dict={'Process':process,'Table':table_dict} # create dictionary for run time output dictionary
 
-        '''output=[]
-        current_row = next_row
-        print('previous row' ,current_row-1)
-        if current_row>1:
-         loop_count=0
-         output_wid_position=5
-         for each_wid in fr_table.winfo_children():
-             loop_count+=1
-             if loop_count/7==current_row-1:
-                 print('loop_countdiveded7',loop_count/7)
-                 break
-             if loop_count==output_wid_position:
-                 output_wid_position+=7
-                 output.append(each_wid.cget('text'))'''
+        global storein_output_dict
+        storein_output_dict=self.storein_output_dict
 
-        '''print(output)
-        for i in range(100):
-            lb_var.insert(END, i)'''
+        #create dictionary of all the values from process table
+        for each_row in self.process_table_var_dict:
+            self.process_table_val_dict[each_row]={'Handle': self.process_table_var_dict[each_row]['Handle'].get(),
+                                              'Action': self.process_table_var_dict[each_row]['Action'].get(),
+                                              'Input': self.process_table_var_dict[each_row]['Input'].get(),
+                                              'Output': self.process_table_var_dict[each_row]['Output'].get(),
+                                              'Exception': self.process_table_var_dict[each_row]['Exception'].get(),
+                                              'RowSelect': self.process_table_var_dict[each_row]['RowSelect'].get()}
 
-        # attach listbox to scrollbar
-        lb_var.config(yscrollcommand=sb_variable_listbox.set)
-        sb_variable_listbox.config(command=lb_var.yview)
+        # create final dictionary wich can be used to update in database
+        self.process_val_dict = {'Cluster': self.process_wids_dict['ClusterOptionmenuVar'].get(),
+                                 'Process': self.process_wids_dict['ProcessOptionmenuVar'].get(),
+                                 'Page': self.process_wids_dict['PageOptionmenuVar'].get(),
+                                 'PageIndex': self.process_wids_dict['PageIndexVar'].get(),
+                                 'Table': self.process_table_val_dict, 'Output': self.storein_output_dict}
 
-        lb_var.bind('<<ListboxSelect>>', self.lb_onselect)
+        print("Final page dictionary with refresh call: ", self.process_val_dict)
+        return self.process_val_dict
 
-        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var_output,win=input_window: self.ok_button_call_output_window(fr,var,win))
-        bt_ok.place(relx=.86, rely=.878)
+
+            # **
 
     def add_row_button_call(self):
-
-        '''self.process_wids_dict = {'ConfigureFrame': '', 'TableFrame': '', 'TableCanvas': '', 'TableScrollBar': '',
-                                  'ClusetrLabel': '', 'ClusterOptionmenu': "", 'ClusterOptionmenuVar': '',
-                                  'NewClusterLbel': '', 'NewClusterEntry': '', 'NewClusterSaveButton': '',
-                                  'NewClusterCancelButton': '',
-                                  'ProcessLabel': '', 'ProcessOptionmenu': '', 'ProcessOptionmenuVar': '',
-                                  'NewProcessLabel': '', 'NewProcessEntry': '', 'NewProcessSaveButton': '',
-                                  'NewProcessCancelButton': '',
-                                  'PageLabel': '', 'PageOptionmenu': '', 'PageOptionmenuVar': '',
-                                  'NewPageLabel': '', 'NewPageEntry': '', 'NewPageSaveButton': '',
-                                  'NewPageCancelButton': '',
-                                  'PageIndexLabel': '', 'PageIndexSpinbox': '', 'PageIndexVar': '',
-                                  'StepButton': '', 'AddButton': '', 'SaveButton': '', 'DeleteButton': '',
-                                  'RunButton': ''}'''
 
         # get widgets
         fr_config = self.process_wids_dict['ConfigureFrame']
@@ -1093,24 +746,24 @@ class ProcessStudioProcessTab:
         cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
         process_var = self.process_wids_dict['ProcessOptionmenuVar']
 
-        process_val=process_var.get()
-        if process_val=='' or process_val=="Create New Process":
-            messagebox.showerror('Error','Select Process Before Adding Row',parent=fr_config)
+        process_val = process_var.get()
+        if process_val == '' or process_val == "Create New Process":
+            messagebox.showerror('Error', 'Select Process Before Adding Row', parent=fr_config)
             return
 
-        fr_table.update_idletasks() # update table if any widgets it stuck
+        fr_table.update_idletasks()  # update table if any widgets it stuck
 
-        children_windows = fr_table.winfo_children() #store the children widgets from table frame
-        rows_tableframe = (len(children_windows)) / 7 # store the number of rows in table frame (each widgets consist of 7 widgets
+        children_windows = fr_table.winfo_children()  # store the children widgets from table frame
+        rows_tableframe = (len(
+            children_windows)) / 7  # store the number of rows in table frame (each widgets consist of 7 widgets
 
         # whenever checkbutton is checked, instance dictionary-check_button_dict will be updated with rows and its value
         def get_checkbutton_value(cb, var):
             val = var.get()
             row = cb.grid_info()['row']
-            #row += 1
+            # row += 1
             self.check_button_dict[row] = val
             print(self.check_button_dict)
-
 
         # call back function for handler variable change
         def refresh_handle_om(om_action, var_action, var_handler, var_input, var_output, lb_input):
@@ -1121,7 +774,8 @@ class ProcessStudioProcessTab:
 
             # retrive action list for handler
             actions_list = self.db.retrive_action_for_handles(var_handler.get())
-            #print('action list\n',actions_list)
+
+            # print('action list\n',actions_list)
 
             # command for each menu in action opetion menu drop down
             def refresh_action_om(action, var_handler, var_action, var_input, var_output, lb_input):
@@ -1141,15 +795,15 @@ class ProcessStudioProcessTab:
                                                                                   var_output, lb_input))
 
         # Find any checkbutton is checked and get the row checked
-        checked=False
-        checked_row=''
+        checked = False
+        checked_row = ''
         for each in self.check_button_dict:
-            if self.check_button_dict[each]==1:
-                checked=True
-                checked_row=each
+            if self.check_button_dict[each] == 1:
+                checked = True
+                checked_row = each
 
         # perform below activity if any row is checked
-        if checked==False:
+        if checked == False:
             next_row = 1
 
             #  derive the next row considering current rumber of rows
@@ -1158,14 +812,14 @@ class ProcessStudioProcessTab:
             # create sequential label
             lb_input = Label(fr_table, text=next_row, fg='black', underline=1, width=3, relief=FLAT)
             lb_input.grid(row=next_row, column=1)
-            #self.process_table_var_dict['row']=next_row
+            # self.process_table_var_dict['row']=next_row
 
             # create handle OptionMenu
-            tem_var_list=[]
+            tem_var_list = []
             var_handler1 = StringVar()
             chocices_handler = self.db.retrive_all_handles()
             om_handler1 = OptionMenu(fr_table, var_handler1, *chocices_handler)
-            om_handler1.config(width=38,bg='snow')
+            om_handler1.config(width=38, bg='snow')
             om_handler1.grid(row=next_row, column=2)
             tem_var_list.append(var_handler1)
 
@@ -1173,17 +827,17 @@ class ProcessStudioProcessTab:
             var_action1 = StringVar()
             chocices_action = ['Dummy']
             om_action1 = OptionMenu(fr_table, var_action1, *chocices_action)
-            om_action1.config(width=38,bg='snow')
+            om_action1.config(width=38, bg='snow')
             om_action1.grid(row=next_row, column=3)
             tem_var_list.append(var_action1)
 
             # create input label
             var_input1, var_input_name, var_input_value = StringVar(), list(), list()
             var_input1.set('Input')
-            lb_input1 = Label(fr_table, text='Input', fg='blue', underline=1, width=24, relief=FLAT, textvariable=var_input1)
+            lb_input1 = Label(fr_table, text='Input', fg='blue', underline=1, width=24, relief=FLAT,
+                              textvariable=var_input1)
             lb_input1.grid(row=next_row, column=4)
-            lb_input1.bind('<Button-1>',
-                          lambda x: self.process_input_window(fr_table, var_handler1, var_action1, var_input1, next_row))
+            lb_input1.bind('<Button-1>',lambda x, row=next_row: self.process_input_window(row))
 
             tem_var_list.append(var_input1)
 
@@ -1193,13 +847,13 @@ class ProcessStudioProcessTab:
             lb_output = Label(fr_table, text='Output', fg='blue', underline=1, width=25, relief=FLAT,
                               textvariable=var_output1)
             lb_output.grid(row=next_row, column=5)
-            lb_output.bind('<Button-1>',
-                           lambda x: self.process_output_window(fr_table, var_handler1, var_action1, var_output1, next_row))
+            lb_output.bind('<Button-1>',lambda x,row=next_row: self.process_output_window(row))
             tem_var_list.append(var_output1)
 
             # create exception label
             var_exception1 = StringVar()
-            lb_exception_handle = Label(fr_table, text='Exception Handle', fg='blue', underline=1, width=18, relief=FLAT,textvariable=var_exception1)
+            lb_exception_handle = Label(fr_table, text='Exception Handle', fg='blue', underline=1, width=18,
+                                        relief=FLAT, textvariable=var_exception1)
             lb_exception_handle.grid(row=next_row, column=6)
             tem_var_list.append(var_exception1)
             self.var_table.append(tem_var_list)
@@ -1210,31 +864,31 @@ class ProcessStudioProcessTab:
             cbt_tbl.configure(command=lambda cb=cbt_tbl, var=var_row_select: get_checkbutton_value(cb, var))
             cbt_tbl.grid(row=next_row, column=7)
 
-            self.process_table_var_dict[next_row] = {'Handle':var_handler1,'Action':var_action1,
-                                                     'Input':var_input1,'Output':var_output1,
-                                                     'Exception':var_exception1,'RowSelect':var_row_select}
+            self.process_table_var_dict[next_row] = {'Handle': var_handler1, 'Action': var_action1,
+                                                     'Input': var_input1, 'Output': var_output1,
+                                                     'Exception': var_exception1, 'RowSelect': var_row_select}
 
             # configure scrollbar
             cn_on_fr_table.config(scrollregion=cn_on_fr_table.bbox('all'), yscrollcommand=y_socrollbar.set)
             y_socrollbar.config(command=cn_on_fr_table.yview)
             y_socrollbar.pack(side=RIGHT, fill=Y)
 
-
             # trace handler varibale
             var_handler1.trace('w',
-                              lambda x, y, z: refresh_handle_om(om_action1, var_action1, var_handler1, var_input1, var_output1,
-                                                                lb_input1))
+                               lambda x, y, z: refresh_handle_om(om_action1, var_action1, var_handler1, var_input1,
+                                                                 var_output1,
+                                                                 lb_input1))
 
-
-            #print('var table:\n',self.var_table)
+            # print('var table:\n',self.var_table)
 
         # preform the below activity if checked
         if checked == True:
             # read all the rows and store in var_value list
+           # self.var_table = []
             var_values=[]
-            loop_count=0
+            loop_count = 0
             for each_row in self.var_table:
-                loop_count+=1
+                loop_count += 1
                 var_value_temp = []
                 var_value_temp.append((each_row[0]).get())
                 var_value_temp.append((each_row[1]).get())
@@ -1243,7 +897,7 @@ class ProcessStudioProcessTab:
                 var_value_temp.append((each_row[4]).get())
                 var_values.append(var_value_temp)
 
-                if loop_count==checked_row:
+                if loop_count == checked_row:
                     var_value_temp = []
                     var_value_temp.append('')
                     var_value_temp.append('')
@@ -1251,22 +905,21 @@ class ProcessStudioProcessTab:
                     var_value_temp.append('Output')
                     var_value_temp.append('Exception Handle')
                     var_values.append(var_value_temp)
-            print('var_values\n',var_values)
+            print('var_values\n', var_values)
 
-
-            self.var_table=[] #store variables of the row as list
-            self.process_table_var_dict={} #store variables of the row by rows
+            self.var_table = []  # store variables of the row as list
+            self.process_table_var_dict = {}  # store variables of the row by rows
 
             # destory all the widgets in table
             for each in children_windows:
                 each.destroy()
 
             # place the widgets for var_values
-            loop_count=0
-            next_row=0
+            loop_count = 0
+            next_row = 0
             for each in var_values:
-                loop_count+=1
-                next_row+=1
+                loop_count += 1
+                next_row += 1
 
                 # create label for sequence
                 lb_input = Label(fr_table, text=loop_count, fg='black', underline=1, width=3, relief=FLAT)
@@ -1277,21 +930,21 @@ class ProcessStudioProcessTab:
                 var_handler = StringVar()
                 var_handler.set(each[0])
                 chocices_handler = self.db.retrive_all_handles()
-                om_handler = OptionMenu(fr_table, var_handler , *chocices_handler)
-                om_handler.config(width=38,bg='snow')
+                om_handler = OptionMenu(fr_table, var_handler, *chocices_handler)
+                om_handler.config(width=38, bg='snow')
                 om_handler.grid(row=next_row, column=2)
-                tem_var_list.append(var_handler )
+                tem_var_list.append(var_handler)
 
                 # create OptionMenu for action
                 var_action = StringVar()
                 var_action.set(each[1])
                 chocices_action = ['Dummy']
                 om_action = OptionMenu(fr_table, var_action, *chocices_action)
-                om_action .config(width=38,bg='snow')
-                om_action .grid(row=next_row, column=3)
+                om_action.config(width=38, bg='snow')
+                om_action.grid(row=next_row, column=3)
                 # self.var_table.append(var_action)
                 tem_var_list.append(var_action)
-                #print('om_action: ',om_action )
+                # print('om_action: ',om_action )
 
                 # create label for input
                 var_input, var_input_name, var_input_value = StringVar(), list(), list()
@@ -1299,11 +952,7 @@ class ProcessStudioProcessTab:
                 lb_input = Label(fr_table, text='Input', fg='blue', underline=1, width=24, relief=FLAT,
                                  textvariable=var_input)
                 lb_input.grid(row=next_row, column=4)
-                lb_input.bind('<Button-1>',
-                              lambda fr_table=fr_table, var_handler=var_handler,
-                                     var_action=var_action, var_input=var_input,
-                                     next_row=next_row: self.process_input_window(fr_table, var_handler, var_action, var_input,
-                                                                  next_row))
+                lb_input.bind('<Button-1>',lambda x, row=next_row: self.process_input_window(row))
 
                 tem_var_list.append(var_input)
 
@@ -1313,11 +962,8 @@ class ProcessStudioProcessTab:
                 lb_output = Label(fr_table, text='Output', fg='blue', underline=1, width=25, relief=FLAT,
                                   textvariable=var_output)
                 lb_output.grid(row=next_row, column=5)
-                lb_output.bind('<Button-1>',
-                               lambda fr_table=fr_table,var_handler=var_handler,
-                                      var_action=var_action,
-                                      var_output=var_output,next_row=next_row: self.process_output_window(fr_table, var_handler, var_action, var_output,
-                                                                    next_row))
+                lb_output.bind('<Button-1>', lambda x, row=next_row: self.process_output_window(row))
+
                 tem_var_list.append(var_output)
 
                 # create label for exception
@@ -1346,8 +992,8 @@ class ProcessStudioProcessTab:
                 y_socrollbar.pack(side=RIGHT, fill=Y)
 
                 # trace handler
-                var_handler.trace_variable('w',lambda m,n,o,x=om_action, y=var_action, z=var_handler, a=var_input,b=var_output,c=lb_input:refresh_handle_om(x,y,z,a,b,c))
-
+                var_handler.trace_variable('w', lambda m, n, o, x=om_action, y=var_action, z=var_handler, a=var_input,
+                                                       b=var_output, c=lb_input: refresh_handle_om(x, y, z, a, b, c))
 
         # mark all the checkbutton values btaken to dictionary as 0
         for each in self.check_button_dict:
@@ -1355,15 +1001,19 @@ class ProcessStudioProcessTab:
 
         print('var table:\n', self.var_table)
         print('var table dictionary:\n', self.process_table_var_dict)
+        print('var process dictionary:\n', self.process_var_dict)
 
-    def del_row_button_call(self, ps_process_tab):
 
-        #define frames and widgets
-        fr_config = (ps_process_tab.winfo_children())[0]
-        fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
-        fr_table.update_idletasks()
-        y_socrollbar = (((ps_process_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
-        cn_on_fr_table = (((ps_process_tab.winfo_children())[1]).winfo_children()[0])
+    # **
+    def del_row_button_call(self):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        y_socrollbar = self.process_wids_dict['TableScrollBar']
+        cn_on_fr_table = self.process_wids_dict['TableCanvas']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+
         children_windows = fr_table.winfo_children()
         rows_tableframe = (len(children_windows)) / 7
 
@@ -1371,9 +1021,9 @@ class ProcessStudioProcessTab:
         def get_checkbutton_value(cb, var):
             val = var.get()
             row = cb.grid_info()['row']
-            #row += 1
+            # row += 1
             self.check_button_dict[row] = val
-            #print(self.check_button_dict)
+            # print(self.check_button_dict)
 
         # call function for change in handler value
         def refresh_handle_om(om_action, var_action, var_handler, var_input, var_output, lb_input):
@@ -1400,22 +1050,22 @@ class ProcessStudioProcessTab:
                                                                                   var_output, lb_input))
 
         # Find any checkbutton is checked and store in checked row
-        checked=False
-        checked_row=''
+        checked = False
+        checked_row = ''
         for each in self.check_button_dict:
-            if self.check_button_dict[each]==1:
-                checked=True
-                checked_row=each
+            if self.check_button_dict[each] == 1:
+                checked = True
+                checked_row = each
 
         # perform the bewlo activity if any row is checked
         if checked == True:
-            var_values=[]
-            loop_count=0
+            var_values = []
+            loop_count = 0
 
             # read all the rows except to the row checked
             for each_row in self.var_table:
-                loop_count+=1
-                if loop_count==checked_row:
+                loop_count += 1
+                if loop_count == checked_row:
                     continue
                 else:
                     var_value_temp = []
@@ -1426,20 +1076,21 @@ class ProcessStudioProcessTab:
                     var_value_temp.append((each_row[4]).get())
                     var_values.append(var_value_temp)
 
-            #print('var_values\n',var_values)
+            # print('var_values\n',var_values)
 
-            self.var_table=[]
+            self.var_table = []
+            self.process_table_var_dict = {}
 
             # destory all the widgets in the table
             for each in children_windows:
                 each.destroy()
 
             # place all the widgets for the values read in var_vales
-            loop_count=0
-            next_row=0
+            loop_count = 0
+            next_row = 0
             for each in var_values:
-                loop_count+=1
-                next_row+=1
+                loop_count += 1
+                next_row += 1
 
                 lb_input = Label(fr_table, text=loop_count, fg='blue', underline=1, width=3, relief=FLAT)
                 lb_input.grid(row=next_row, column=1)
@@ -1448,20 +1099,20 @@ class ProcessStudioProcessTab:
                 var_handler = StringVar()
                 var_handler.set(each[0])
                 chocices_handler = self.db.retrive_all_handles()
-                om_handler = OptionMenu(fr_table, var_handler , *chocices_handler)
+                om_handler = OptionMenu(fr_table, var_handler, *chocices_handler)
                 om_handler.config(width=38)
                 om_handler.grid(row=next_row, column=2)
-                tem_var_list.append(var_handler )
+                tem_var_list.append(var_handler)
 
                 var_action = StringVar()
                 var_action.set(each[1])
                 chocices_action = ['Dummy']
                 om_action = OptionMenu(fr_table, var_action, *chocices_action)
-                om_action .config(width=38)
-                om_action .grid(row=next_row, column=3)
+                om_action.config(width=38)
+                om_action.grid(row=next_row, column=3)
                 # self.var_table.append(var_action)
                 tem_var_list.append(var_action)
-                print('om_action: ',om_action )
+                print('om_action: ', om_action)
 
                 var_input, var_input_name, var_input_value = StringVar(), list(), list()
                 var_input.set(each[2])
@@ -1500,17 +1151,416 @@ class ProcessStudioProcessTab:
                 cbt_tbl.configure(command=lambda cb=cbt_tbl, var=var_row_select: get_checkbutton_value(cb, var))
                 cbt_tbl.grid(row=next_row, column=7)
 
+                # store variables of the row by rows
+                self.process_table_var_dict[next_row] = {'Handle': var_handler, 'Action': var_action,
+                                                         'Input': var_input, 'Output': var_output,
+                                                         'Exception': var_exception, 'RowSelect': var_row_select}
+
                 cn_on_fr_table.config(scrollregion=cn_on_fr_table.bbox('all'), yscrollcommand=y_socrollbar.set)
                 y_socrollbar.config(command=cn_on_fr_table.yview)
                 y_socrollbar.pack(side=RIGHT, fill=Y)
 
-
-                var_handler.trace_variable('w',lambda m,n,o,x=om_action, y=var_action, z=var_handler, a=var_input,b=var_output,c=lb_input:refresh_handle_om(x,y,z,a,b,c))
-                #print('var table:\n', self.var_table)
+                var_handler.trace_variable('w', lambda m, n, o, x=om_action, y=var_action, z=var_handler, a=var_input,
+                                                       b=var_output, c=lb_input: refresh_handle_om(x, y, z, a, b, c))
+                # print('var table:\n', self.var_table)
 
         # mark all the checkbutton values btaken to dictionary as 0
         for each in self.check_button_dict:
             self.check_button_dict[each] = 0
+
+        print('var table dict in delete table button call : ', self.process_table_var_dict)
+
+    def process_input_window(self,row):
+
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        y_socrollbar = self.process_wids_dict['TableScrollBar']
+        cn_on_fr_table = self.process_wids_dict['TableCanvas']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+
+        ''''#derive widgets in output tab
+        fr_config_output = (self.process_studio_output_tab.winfo_children())[0]
+        fr_table_output = (((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[0]
+        fr_table_output.update_idletasks()
+        y_socrollbar_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
+        cn_on_fr_table_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0])
+        children_windows_tbl_output=fr_table_output.winfo_children()'''
+
+        # create TopLevel window for input
+        input_window=Toplevel(self.process_studio_notebook)
+        input_window.title('Input')
+        input_window.geometry("800x400")
+
+        # create table frame
+        fr_input_table=Frame(input_window,bg='snow',highlightthickness=0)
+        fr_input_table.place(relx=.025, rely=.025, relwidth=.71, relheight=.9)
+
+        # create listbox for output
+        fr_output_var_listbox = Frame(input_window, bg='snow',highlightthickness=0)
+        fr_output_var_listbox.place(relx=.75, rely=.1, relwidth=.24, relheight=.75)
+
+        # create optionMenu for variables
+        var_output_option=StringVar()
+        var_output_option.set('Output Variable')
+        choices_output=['Output Variable','Application Moduler Variable','Global Variable']
+        om_output_var_options=OptionMenu(input_window,var_output_option,*choices_output)
+        om_output_var_options.place(relx=.75, rely=.025, relwidth=.24)
+
+        cn_input_table=Canvas(fr_input_table,highlightthickness=0) # create Canvas on table frame
+        sb_input_table=Scrollbar(fr_input_table,orient="vertical",command=cn_input_table.yview) # create Scrollbar on table frame
+        fr_cn_input_table=Frame(cn_input_table) # create frame on table Canvas
+
+        # create header table for table frame
+        lb_input_name=Label(fr_cn_input_table,text="Input Name", font=("Arial Bold", 10), bg='gray87', width=22,relief=GROOVE).grid(row=1,column=1)
+        lb_input_value = Label(fr_cn_input_table, text="Input Value", font=("Arial Bold", 10), bg='gray87', width=43,relief=GROOVE).grid(row=1, column=2)
+        lb_input_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=3)
+
+
+        #row number
+
+        input=(self.process_table_var_dict[row]['Input']).get()
+        input=eval(input)
+
+        # place input name and value in window
+        r=2
+        loop_count=0
+        for each in input:
+            print('each is : ',each)
+            var_input_name=StringVar()
+            InputName=(input[each])['InputName']
+            #print(InputName)
+            var_input_name.set(InputName)
+            lb_input_name_vale = Label(fr_cn_input_table, textvariable=var_input_name, font=("Arial", 10), bg='gray87', width=22).grid(row=r, column=1)
+            var_ent=StringVar()
+            InputValue = (input[each])['InputValue']
+            if str(InputValue)=='str()':InputValue==''
+            var_ent.set(InputValue)
+            et_input_value_val=Entry(fr_cn_input_table, width=58,textvariable=var_ent)
+
+            et_input_value_val.grid(row=r, column=2)
+            et_input_value_val.bind('<Button-3>', lambda var_ent=var_ent: self.update_input_value_entrybox(var_ent))
+            #et_input_value_val.configure(command=lambda ent=et_input_value_val: self.update_input_value_entrybox(ent,var_ent))
+            bt_input_validate = Button(fr_cn_input_table, text="", bg='gray87', width=1)
+            bt_input_validate.grid(row=r, column=3)
+            bt_input_validate.configure(command=lambda bt=bt_input_validate,ent=et_input_value_val,fr=fr_input_table, :self.input_row_validate_button_call(bt,ent,fr))
+            r+=1
+            loop_count+=1
+
+
+        cn_input_table.create_window(0, 0, anchor = 'nw', window = fr_cn_input_table)
+        cn_input_table.update_idletasks()
+
+        # configure scrollbar
+        cn_input_table.configure(scrollregion=cn_input_table.bbox('all'), yscrollcommand=sb_input_table.set)
+        cn_input_table.pack(side='left', expand=True, fill='both')
+        sb_input_table.pack(side='right', fill='both')
+        sb_variable_listbox = Scrollbar(fr_output_var_listbox)
+        sb_variable_listbox.pack(side=RIGHT, fill=Y)
+
+        # Create listbox for variable
+        lb_var = Listbox(fr_output_var_listbox)
+        lb_var.pack(side='left',fill='both',expand=True)
+
+
+        # read all the ourput variable name from output tab
+        '''def update_listbox_for_output_variable(*args):
+            if var_output_option.get()=='Output Variable':
+                output_var=[]
+                loop_count=0
+                ent_box_count=0
+                for each in children_windows_tbl_output:
+                    print(each)
+                    if each.winfo_class()=='Entry':
+                        print(each.get())
+                        ent_box_count+=1
+                        if ent_box_count%2>0:
+                            output_var.append(each.get())
+
+                # insert all the output variable name into listbox
+                lb_var.delete(0,END)
+                for each in output_var:
+                    lb_var.insert(END, each)
+            else:
+                lb_var.delete(0, END)'''
+
+        #update_listbox_for_output_variable() #when open output window first time, update the output variable names in listbox
+        #var_output_option.trace_variable('w',update_listbox_for_output_variable) #when the value is select as output variable in OptionMenu, update listbox
+
+
+
+        # attach listbox to scrollbar
+        lb_var.config(yscrollcommand=sb_variable_listbox.set)
+        sb_variable_listbox.config(command=lb_var.yview)
+
+        lb_var.bind('<<ListboxSelect>>', self.lb_onselect) #bind the item listbox to right click
+
+        # place ok button which will update the input label in the table and close the output window
+        var=self.process_table_var_dict[row]['Input']
+        bt_ok = Button(input_window, text='OK', command=lambda fr=fr_cn_input_table,var=var,win=input_window: self.ok_button_call_input_window(fr,var,win))
+        bt_ok.place(relx=.86, rely=.878)
+
+    def ok_button_call_input_window(self, fr, var, win):
+
+        children_windows = fr.winfo_children() #store all widgets in input frame into a list
+        input={} #create input dictionary
+        loop_count = 0
+        row=1
+        row_active=False
+        for each in children_windows:
+            loop_count += 1
+
+            if row_active==True:
+                input_name=children_windows[loop_count-1].cget("text")
+                input_value = children_windows[loop_count].get()
+                #if input_value=='':
+                   # input_value='str()'
+                input[row]={'InputName':input_name,'InputValue':input_value}
+
+            if loop_count%3==0:
+                row+=1
+                row_active=True
+            else:
+                row_active=False
+
+        var.set(input)
+        win.destroy()
+        print(input)
+
+
+    def lb_onselect(self,evt):
+        # Note here that Tkinter passes an event object to onselect()
+        w = evt.widget
+        index = int(w.curselection()[0])
+        global input_lb_selected_value
+        input_lb_selected_value = (w.get(index))
+        print('You selected item %d: "%s"' % (index, input_lb_selected_value))
+
+    def update_input_value_entrybox(self,var_ent):
+        print(var_ent)
+        var_evt=var_ent.widget
+        len_val=(len(var_evt.get()))+2
+
+        #var_evt.delete(0,END)
+        text="&" + str(input_lb_selected_value) + "&"
+        print(text)
+        var_evt.insert(len_val,text)
+
+    def input_row_validate_button_call(self, button, input_value_entry, frame):
+        print(button)
+        print(input_value_entry)
+        # print(input_value_entry.get())
+        # str="print(input_value_entry.get())"
+        try:
+            text = input_value_entry.get()
+            if len(text) > 0:
+                print("value taken")
+                value = str(eval(input_value_entry.get()))
+            if len(text) == 0: value = 'None'
+            string = "messagebox.showinfo('Input Value',message=value,parent=frame)"
+            exec(string)
+        except Exception as e:
+            error = "Error: " + str(e)
+            string = "messagebox.showerror('Input Value',message=error,parent=frame)"
+            exec(string)
+
+    def process_output_window(self,row):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        y_socrollbar = self.process_wids_dict['TableScrollBar']
+        cn_on_fr_table = self.process_wids_dict['TableCanvas']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+        y_socrollbar_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0]).winfo_children()[1]
+        cn_on_fr_table_output=(((self.process_studio_output_tab.winfo_children())[1]).winfo_children()[0])
+        #children_windows_tbl_output=fr_table_output.winfo_children()
+
+
+        #print('next row is',next_row)
+        #print("in toplevel window")
+        output_window=Toplevel(self.process_studio_notebook)
+        output_window.title('Output')
+        output_window.geometry("800x400")
+
+
+
+        fr_output_table=Frame(output_window,bg='snow',highlightthickness=0)
+        fr_output_table.place(relx=.025, rely=.025, relwidth=.71, relheight=.9)
+
+        fr_output_var_listbox = Frame(output_window, bg='snow',highlightthickness=0)
+        fr_output_var_listbox.place(relx=.75, rely=.1, relwidth=.24, relheight=.75)
+
+        var_output_option=StringVar()
+        var_output_option.set('Output Variable')
+        choices_output=['Output Variable','Application Moduler Variable','Global Variable']
+        om_output_var_options=OptionMenu(output_window,var_output_option,*choices_output)
+        om_output_var_options.place(relx=.75, rely=.025, relwidth=.24)
+
+
+
+        cn_output_table=Canvas(fr_output_table,highlightthickness=0)
+        sb_output_table=Scrollbar(fr_output_table,orient="vertical",command=cn_output_table.yview)
+
+        fr_cn_input_table=Frame(cn_output_table)
+
+
+        lb_output_name=Label(fr_cn_input_table,text="Output Name", font=("Arial Bold", 10), bg='gray87', width=22,relief=GROOVE).grid(row=1,column=1)
+        lb_output_storein = Label(fr_cn_input_table, text="Store In", font=("Arial Bold", 10), bg='gray87', width=18,relief=GROOVE).grid(row=1, column=2)
+        #lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=3)
+        lb_output_value = Label(fr_cn_input_table, text="Output Value", font=("Arial Bold", 10), bg='gray87', width=30,relief=GROOVE).grid(row=1, column=3)
+        lb_output_validate = Label(fr_cn_input_table, text="", font=("Arial Bold", 10), bg='gray87', width=1,relief=GROOVE).grid(row=1, column=4)
+
+        output = (self.process_table_var_dict[row]['Output']).get()
+        output = eval(output)
+
+        r=2
+        loop_count=0
+        for each in output:
+            var_output_name=StringVar()
+            var_output_name.set(output[each]['OutputName'])
+            lb_input_name_vale = Label(fr_cn_input_table, textvariable=var_output_name, font=("Arial", 10), bg='gray87', width=22).grid(row=r, column=1)
+
+            var_storein = StringVar()
+            #var_storein.set(storein[loop_count])
+            #var_storein.set(input_value[loop_count])
+            if 'StoreIn' in output[each]:
+                var_storein.set(output[each]['StoreIn'])
+            et_storein = Entry(fr_cn_input_table, width=24, textvariable=var_storein)
+            et_storein.bind('<Button-3>', lambda var_ent=var_storein: self.update_input_value_entrybox(var_ent))
+            et_storein.grid(row=r, column=2)
+
+            var_ent=StringVar()
+            var_ent.set(output[each]['OutputValue'])
+            et_input_value_val=Entry(fr_cn_input_table, width=40,textvariable=var_ent)
+            et_input_value_val.grid(row=r, column=3)
+
+            #et_input_value_val.configure(command=lambda ent=et_input_value_val: self.update_input_value_entrybox(ent,var_ent))
+            bt_input_validate = Button(fr_cn_input_table, text="", bg='gray87', width=1)
+            bt_input_validate.configure(command=lambda bt=bt_input_validate,ent=et_input_value_val,fr=cn_output_table, :self.input_row_validate_button_call(bt,ent,fr))
+            bt_input_validate.grid(row=r, column=4)
+
+            r+=1
+            loop_count+=1
+
+        cn_output_table.create_window(0, 0, anchor = 'nw', window = fr_cn_input_table)
+
+        cn_output_table.update_idletasks()
+
+        cn_output_table.configure(scrollregion=cn_output_table.bbox('all'), yscrollcommand=sb_output_table.set)
+        cn_output_table.pack(side='left', expand=True, fill='both')
+        cn_output_table.pack(side='right', fill='both')
+
+
+
+        sb_variable_listbox = Scrollbar(fr_output_var_listbox)
+        sb_variable_listbox.pack(side=RIGHT, fill=Y)
+
+        lb_var = Listbox(fr_output_var_listbox)
+        lb_var.pack(side='left',fill='both',expand=True)
+
+        # read all the ourput variable name from output tab
+        '''def update_listbox_for_output_variable(*args):
+            if var_output_option.get() == 'Output Variable':
+                output_var = []
+                loop_count = 0
+                ent_box_count = 0
+                for each in children_windows_tbl_output:
+                    print(each)
+                    if each.winfo_class() == 'Entry':
+                        print(each.get())
+                        ent_box_count += 1
+                        if ent_box_count % 2 > 0:
+                            output_var.append(each.get())
+
+                # insert all the output variable name into listbox
+                lb_var.delete(0, END)
+                for each in output_var:
+                    lb_var.insert(END, each)
+            else:
+                lb_var.delete(0, END)
+
+        update_listbox_for_output_variable()  # when open output window first time, update the output variable names in listbox
+        var_output_option.trace_variable('w',
+                                         update_listbox_for_output_variable)  # when the value is select as output variable in OptionMenu, update listbox'''
+
+        '''output=[]
+        current_row = next_row
+        print('previous row' ,current_row-1)
+        if current_row>1:
+         loop_count=0
+         output_wid_position=5
+         for each_wid in fr_table.winfo_children():
+             loop_count+=1
+             if loop_count/7==current_row-1:
+                 print('loop_countdiveded7',loop_count/7)
+                 break
+             if loop_count==output_wid_position:
+                 output_wid_position+=7
+                 output.append(each_wid.cget('text'))'''
+
+        '''print(output)
+        for i in range(100):
+            lb_var.insert(END, i)'''
+
+        # attach listbox to scrollbar
+        '''lb_var.config(yscrollcommand=sb_variable_listbox.set)
+        sb_variable_listbox.config(command=lb_var.yview)
+
+        lb_var.bind('<<ListboxSelect>>', self.lb_onselect)'''
+        var = self.process_table_var_dict[row]['Output']
+        bt_ok = Button(output_window, text='OK', command=lambda fr=fr_cn_input_table,var=var,win=output_window: self.ok_button_call_output_window(fr,var,win))
+        bt_ok.place(relx=.86, rely=.878)
+
+    def ok_button_call_output_window(self, fr, var, win):
+        output_name, output_value,storein, output = list(), list(),list(), ''
+        children_windows = fr.winfo_children()
+        loop_count = 0
+        ent_count=0
+        children_windows = fr.winfo_children() #store all widgets in input frame into a list
+        output={} #create input dictionary
+        loop_count = 0
+        row=1
+        row_active=False
+        for each in children_windows:
+            loop_count += 1
+
+            if row_active==True:
+                output_name=children_windows[loop_count-1].cget("text")
+                storein_value = children_windows[loop_count].get()
+                output_value = children_windows[loop_count+1].get()
+                #if input_value=='':
+                   # input_value='str()'
+                output[row]={'OutputName':output_name,'StoreIn':storein_value ,'OutputValue':output_value}
+
+            if loop_count%4==0:
+                row+=1
+                row_active=True
+            else:
+                row_active=False
+
+
+        #for each in children_windows:
+            #loop_count += 1
+             #print(each.winfo_class)
+            '''if each.winfo_class() == 'Label' and loop_count > 4:
+                # print(each.cget("text"))
+                output_name.append(each.cget("text"))
+            if each.winfo_class() == 'Entry':
+                ent_count+=1
+                if ent_count%2>0:
+                    if len(each.get())>0:storein.append(each.get())
+                    if len(each.get()) == 0: storein.append('&dummy&')
+                if ent_count % 2 == 0:
+                    if len(each.get())>0:output_value.append(each.get())
+                    if len(each.get()) == 0: output_value.append('str()')'''
+
+
+
+        var.set(output)
+        win.destroy()
+        print(output)
 
     def step_button_call(self,fr_table):
         print('printing var tabl in step button call: ',self.var_table)
@@ -1634,19 +1684,108 @@ class ProcessStudioProcessTab:
         except Exception as e:
             messagebox.showerror('Error','Error in running the step as: ' + str(e), parent=self.process_studio_notebook)
 
+    def save_document_button_call(self):
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+
+        self.refresh_button_call()
+
+        '''self.process_val_dict = {'Cluster': self.process_wids_dict['ClusterOptionmenuVar'].get(),
+                                 'Process': self.process_wids_dict['ProcessOptionmenuVar'].get(),
+                                 'Page': self.process_wids_dict['PageOptionmenuVar'].get(),
+                                 'PageIndex': self.process_wids_dict['PageIndexVar'].get(),
+                                 'Table': self.process_table_val_dict, 'Output': self.storein_output_dict}'''
 
 
+        result, message = self.db.create_new_process_page_in_primary_databse(type='process',
+                                                                             cluster=self.process_val_dict['Cluster'],
+                                                                             process=self.process_val_dict['Process'],
+                                                                             page=self.process_val_dict['Page'],
+                                                                             pageindex=self.process_val_dict['PageIndex'],
+                                                                             table=self.process_val_dict['Table'],
+                                                                             output=self.process_val_dict['Output'])
+
+        if result == 'Error':
+            messagebox.showerror(result, message, parent=fr_config)
+        else:
+            messagebox.showinfo(result, 'Process saved', parent=fr_config)
+
+    def retrive_page_doc(self):
+
+        self.test['Test']='Test is added'
+        # get widgets
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        fr_table = self.process_wids_dict['TableFrame']
+        cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
+        process_var = self.process_wids_dict['ProcessOptionmenuVar']
+        page_var = self.process_wids_dict['PageOptionmenuVar']
+
+        cluster=cluster_var.get()
+        process=process_var.get()
+        page=page_var.get()
+
+        latest_page_doc = self.db.retrive_latest_page_doc(cluster=cluster,process=process,page=page)
+        print('latest_page_doc: ', latest_page_doc)
+
+        page_index=latest_page_doc['pageindex']
+        page_table_dict=latest_page_doc['table']
+        output_table_dict=latest_page_doc['output']['Table']
+        global storein_output_dict
+        storein_output_dict=output_table_dict=latest_page_doc['output'] #this is a global variable
 
 
+        rows_in_page_table=len(page_table_dict)
+        for each in range(rows_in_page_table):self.add_row_button_call()
 
-class ProcessStudioOutputTab:
+        row=1
+        for each_row in page_table_dict:
+            handle=page_table_dict[each_row]['Handle']
+            action = page_table_dict[each_row]['Action']
+            input = page_table_dict[each_row]['Input']
+            output = page_table_dict[each_row]['Output']
+            exception = page_table_dict[each_row]['Exception']
+
+            self.process_table_var_dict[row]['Handle'].set(handle)
+            self.process_table_var_dict[row]['Action'].set(action)
+            self.process_table_var_dict[row]['Input'].set(input)
+            self.process_table_var_dict[row]['Output'].set(output)
+            self.process_table_var_dict[row]['Exception'].set(exception)
+
+            row+=1
+
+        children_windows = self.outputtab_table_frame.winfo_children()
+        for each in children_windows:
+            each.destroy()
+
+        output_tab=ProcessStudioOutputTab(self.process_studio_notebook,self.db,self.process_studio_output_tab)
+        output_tab.refresh_table()
+        #self.refresh_button_call()
+        #output_table_dict
+
+    def refresh_table(self):
+        children_widgets=self.outputtab_table_frame.winfo_children() #children widgets from output tab table frame
+
+        #child_widgets = table_frame.winfo_children()  # Store all chidlren widgets in output tab table frame
+        # destoy all the chidren widgets
+        for each in children_widgets:
+            each.destroy()
+
+        output_tab_table_dict=self.storein_output_dict['Table']
+
+
+class ProcessStudioOutputTab(ProcessStudio):
 
     def __init__(self,process_studio_notebook,database,process_studio_output_tab):
+        super().__init__(process_studio_notebook, database)
         self.process_studio_notebook=process_studio_notebook
         self.process_studio_output_tab=process_studio_output_tab
         self.db=database
         self.check_button_dict = {}
         self.var_table = []
+        self.storein_dict={}
+        self.var_table_dict={} #store all the variable fo the row by rows
+
+        self.output_var_dict={'ConfigurationFrame':'','TableCanvas':'' ,'TableFrame':'','AddButton':'','DeleteButton':'','RefreshButton':''}
 
     def output_tab(self,process_studio_process_tab):
         fr_config=Frame(process_studio_process_tab,bd=0)
@@ -1688,11 +1827,22 @@ class ProcessStudioOutputTab:
         #bt_del.place(relx=0.235, rely=0.5, relwidth=0.035)
         bt_del.grid(row=1, column=2)
 
-        bt_Save = Button(fr_config, text="Save")
+        bt_refresh = Button(fr_config, text="Refresh", command=lambda :self.refresh_table())
         #bt_del.place(relx=0.235, rely=0.5, relwidth=0.035)
-        bt_Save.grid(row=1, column=3)
+        bt_refresh.grid(row=1, column=3)
 
         #self.process_tab_config_frame_gui(process_studio_process_tab,'',"","")
+        children_windows=frame.winfo_children()
+        print(children_windows)
+        loop_count=0
+        active_row=True
+        row=1
+        for each in children_windows:
+            print(each)
+
+        self.output_var_dict = {'ConfigurationFrame': fr_config, 'TableCanvas': cn_on_fr_table, 'TableFrame': frame, 'AddButton': bt_add,
+                                'DeleteButton': bt_del, 'RefreshButton': bt_refresh}
+        return frame
 
     def del_row_button_call(self, ps_process_tab):
 
@@ -1899,7 +2049,7 @@ class ProcessStudioOutputTab:
             cb_row_select.configure(command=lambda cb=cb_row_select, var=var_row_select: get_checkbutton_value(cb, var))
             cb_row_select.grid(row=next_row, column=4)
 
-
+            self.var_table_dict[next_row]={'VariableName':var_variable_name,'VariableValue':var_variable_value}
 
             # create sequential label
             '''lb_input = Label(fr_table, text=next_row, fg='blue', underline=1, width=3, relief=FLAT)
@@ -1990,6 +2140,7 @@ class ProcessStudioOutputTab:
             #print('var_values\n',var_values)
 
             self.var_table=[]
+            self.var_table_dict={}
 
             # destory all the widgets in table
             for each in children_windows:
@@ -2021,6 +2172,7 @@ class ProcessStudioOutputTab:
                 tem_var_list.append(var_variable_value)
 
                 self.var_table.append(tem_var_list)
+                self.var_table_dict[next_row] = {'VariableName': var_variable_name, 'VariableValue': var_variable_value}
 
                 # create CheckButton for selecting row
                 var_row_select = IntVar()
@@ -2049,3 +2201,30 @@ class ProcessStudioOutputTab:
         for each in child_widgets:
             each.destroy()
         self.var_table = [] # Set the variable list as empty
+
+
+    def refresh_table(self):
+        table_frame=self.output_var_dict['TableFrame']
+
+        child_widgets = table_frame.winfo_children()  # Store all chidlren widgets in output tab table frame
+        # destoy all the chidren widgets
+        for each in child_widgets:
+            each.destroy()
+
+        print('print storein_output_dict: ',storein_output_dict)
+
+        #print('1L: ',self.storein_output_dict)
+        rows=len(storein_output_dict['Table'])
+        table_dict=storein_output_dict['Table']
+        #self.storein_output_dict
+
+        print(self.var_table_dict)
+        loop_count=1
+        for each in range(rows):
+            self.add_row_button_call(self.process_studio_output_tab)
+            self.var_table_dict[loop_count]['VariableName'].set(table_dict[str(loop_count)]['Key'])
+            self.var_table_dict[loop_count]['VariableValue'].set(table_dict[str(loop_count)]['Value'])
+
+            loop_count+=1
+
+
