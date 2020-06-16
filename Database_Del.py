@@ -411,19 +411,3 @@ class database:
 
         latest_page_doc=latest_page_docs[0]
         return latest_page_doc
-
-
-    #**
-    def retrive_all_page_names_for_process(self,cluster,process):
-        type='process'
-        query = Query()
-        process_doc = self.p_process_table.search(
-            (query.type == type) & (query.cluster == cluster) & (query.process == process))
-
-        pages=[]
-        for each_page_doc in process_doc:
-            page_name=each_page_doc['page']
-            if page_name not in pages:
-                pages.append(page_name)
-
-        return pages

@@ -6,12 +6,17 @@ from PIL import ImageTk, Image
 import time
 
 #import files
-import Database, ObjectStudio, ProcessStudio,ProcessStudio1,HandlerStudio
+import Database, ObjectStudio, ProcessStudio_del,ProcessStudio,HandlerStudio
+
 
 class Main:
 
-    def __init__(self):
+    def __init__(self,primary_db_path,secondary_db_path):
         self.startup_window()
+        self.primary_db_path=primary_db_path
+        self.secondary_db_path=secondary_db_path
+        print(self.primary_db_path)
+        print(self.secondary_db_path)
 
     def startup_window(self):
         root = Tk() # Create root window
@@ -47,10 +52,13 @@ class Main:
         #time.sleep(5)
         root.after(3000, lambda x=root: self.call_main_window(x))
         #self.import_files(root)
+
+
+
         root.mainloop()
 
     def import_files(self,root_startup):
-        import Database, ObjectStudio, ProcessStudio
+        import Database_Del, ObjectStudio, ProcessStudio_del
         time.sleep(3)
         root_startup.destroy()
         self.call_main_window(root_startup)
@@ -60,10 +68,14 @@ class Main:
         startup_window.destroy() #Destory start up window
 
         # Create databases
-        primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomSecondaryDatabase.json"
+        self.primary_db_path = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        self.secondary_db_path = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomSecondaryDatabase.json"
 
-        db = Database.database(primary_db,secondary_db) #Create Databaswe object
+        print(self.primary_db_path)
+        print(self.secondary_db_path)
+
+
+        db = Database.database(self.primary_db_path, self.secondary_db_path) #Create Databaswe object
         self.main_frame(db) #call mainframe from mainwindow
 
     def main_frame(self,db):
@@ -300,13 +312,13 @@ class Main:
 
         #os=ObjectStudio.ObjectStudio(root,db,object_studio_notebook) # Create ObjectStudio object
         #os = HandlerStudio.ObjectStudio(root, db, object_studio_notebook)  # Create ObjectStudio object
-        ps = ProcessStudio1.ProcessStudio(process_studio_notebook, db) # Create ProcessStudio object
+        ps = ProcessStudio.ProcessStudio(process_studio_notebook, self.primary_db_path, self.secondary_db_path) # Create ProcessStudio object
         ps.process_studio()
 
-        primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        #primary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+        #secondary_db=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
 
-        code = HandlerStudio.Code(object_studio_notebook,primary_db,secondary_db)
+        code = HandlerStudio.Code(object_studio_notebook,self.primary_db_path, self.secondary_db_path)
         code.handler_studio()
         code.module_tab_gui()
         code.input_tab_gui()
@@ -316,4 +328,7 @@ class Main:
         #ps.process_studio() # call process_studio function
 
 
-main= Main()
+primary_db_path=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
+secondary_db_path=r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomSecondaryDatabase.json"
+
+main= Main(primary_db_path,secondary_db_path)

@@ -6,9 +6,9 @@ import os,shutil
 from datetime import datetime
 import tkinter
 
-import Database
+import Database_Del
 import GuiGloballVariable
-import ProcessStudio
+import ProcessStudio_del
 
 class ObjectStudio(object):
 
@@ -1399,7 +1399,7 @@ class MainWindow:
         os=ObjectStudio(self.root,db,object_studio_notebook)
         os.object_studio()
 
-        ps=ProcessStudio.ProcessStudio(process_studio_notebook,self.database)
+        ps=ProcessStudio_del.ProcessStudio(process_studio_notebook, self.database)
         ps.process_studio()
 
         #return object_studio_notebook,process_studio_notebook

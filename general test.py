@@ -6,7 +6,7 @@ from PIL import ImageTk, Image
 import time
 
 #import files
-import Database, ObjectStudio, ProcessStudio,ProcessStudio1,HandlerStudio
+import Database_Del, ObjectStudio, ProcessStudio_del,ProcessStudio,HandlerStudio
 outcome_dict={'m':''}
 
 try:

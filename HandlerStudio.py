@@ -6,9 +6,9 @@ import os,shutil
 from datetime import datetime
 import tkinter
 
-import Database
+import Database_Del
 import GuiGloballVariable
-import ProcessStudio
+import ProcessStudio_del
 
 class MainWindow:
 
@@ -149,7 +149,7 @@ class Module(HandlerStudio):
         print("x is : ",self.x)
         self.primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
         self.secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        self.db_m = Database.database(self.primary_db, self.secondary_db)
+        self.db_m = Database_Del.database(self.primary_db, self.secondary_db)
 
     def module_tab_gui(self):
         hs_tab_wids_dict=self.hs_tab_wids_dict # store tabs widgets inherited from HandlerStudio Class
@@ -293,7 +293,7 @@ class Module(HandlerStudio):
             messagebox.showinfo('Success', 'All modules successfuly validated', parent=frame)
 
     def module_handle_refresh_call(self):
-        self.db_m = Database.database(self.primary_db, self.secondary_db)
+        self.db_m = Database_Del.database(self.primary_db, self.secondary_db)
         parameter_frame=self.module_wids_dict['ParameterFrame']
         handle_var = self.module_wids_dict['HandleVar']
         #value=handle_var.get()
@@ -363,7 +363,7 @@ class Module(HandlerStudio):
         self.clear_table()
 
     def module_action_refresh_call(self):
-        self.db_m = Database.database(self.primary_db, self.secondary_db)
+        self.db_m = Database_Del.database(self.primary_db, self.secondary_db)
         #store widgets in module
         parameter_frame = self.module_wids_dict['ParameterFrame']
         action_var = self.module_wids_dict['ActionVar']
@@ -1047,7 +1047,7 @@ class Code(Output):
         #self.db=self.database
         self.primary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
         self.secondary_db = r"C:\Users\Dell\Documents\HK Project GUI\Autom Database\AutomPrimaryDatabase.json"
-        db = Database.database(primary_db, secondary_db)
+        db = Database_Del.database(primary_db, secondary_db)
 
     def code_tab_gui(self):
         hs_tab_wids_dict=self.hs_tab_wids_dict # store tabs widgets inherited from HandlerStudio Class
@@ -1277,7 +1277,7 @@ class Code(Output):
         return code_dict
 
     def code_save_button_call(self):
-        db = Database.database(self.primary_db, self.secondary_db)
+        db = Database_Del.database(self.primary_db, self.secondary_db)
 
         hs_tab_wids_dict = self.hs_tab_wids_dict  # store tabs widgets inherited from HandlerStudio Class
         code_tab = hs_tab_wids_dict['CodeTab']  # store code tab widget
