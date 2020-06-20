@@ -720,7 +720,10 @@ class ProcessStudioProcessTab(ProcessStudio):
         storein_output_dict=self.storein_output_dict
 
         #create dictionary of all the values from process table
+        print("self.process_table_var_dict in refresh button call: ",self.process_table_var_dict)
+        self.process_table_val_dict={}
         for each_row in self.process_table_var_dict:
+            print('rows in process_table_var_dict with refresh button call: ',each_row)
             self.process_table_val_dict[each_row]={'Handle': self.process_table_var_dict[each_row]['Handle'].get(),
                                               'Action': self.process_table_var_dict[each_row]['Action'].get(),
                                               'Input': self.process_table_var_dict[each_row]['Input'].get(),
@@ -729,6 +732,7 @@ class ProcessStudioProcessTab(ProcessStudio):
                                               'RowSelect': self.process_table_var_dict[each_row]['RowSelect'].get()}
 
         # create final dictionary wich can be used to update in database
+
         self.process_val_dict = {'Cluster': self.process_wids_dict['ClusterOptionmenuVar'].get(),
                                  'Process': self.process_wids_dict['ProcessOptionmenuVar'].get(),
                                  'Page': self.process_wids_dict['PageOptionmenuVar'].get(),
@@ -1173,7 +1177,7 @@ class ProcessStudioProcessTab(ProcessStudio):
         for each in self.check_button_dict:
             self.check_button_dict[each] = 0
 
-        print('var table dict in delete table button call : ', self.process_table_var_dict)
+        print('process_table_var_dict in delete table button call : ', self.process_table_var_dict)
 
     def process_input_window(self,row):
 
@@ -1311,7 +1315,7 @@ class ProcessStudioProcessTab(ProcessStudio):
         children_windows = fr.winfo_children() #store all widgets in input frame into a list
         input={} #create input dictionary
         loop_count = 0
-        row=1
+        row=0
         row_active=False
         for each in children_windows:
             loop_count += 1
@@ -1323,7 +1327,7 @@ class ProcessStudioProcessTab(ProcessStudio):
                    # input_value='str()'
                 input[row]={'InputName':input_name,'InputValue':input_value}
 
-            if loop_count%3==0:
+            if  loop_count%3==0:
                 row+=1
                 row_active=True
             else:
@@ -1526,7 +1530,7 @@ class ProcessStudioProcessTab(ProcessStudio):
         children_windows = fr.winfo_children() #store all widgets in input frame into a list
         output={} #create input dictionary
         loop_count = 0
-        row=1
+        row=0
         row_active=False
         for each in children_windows:
             loop_count += 1
@@ -1539,7 +1543,7 @@ class ProcessStudioProcessTab(ProcessStudio):
                    # input_value='str()'
                 output[row]={'OutputName':output_name,'StoreIn':storein_value ,'OutputValue':output_value}
 
-            if loop_count%4==0:
+            if  loop_count%4==0:
                 row+=1
                 row_active=True
             else:
@@ -1715,6 +1719,8 @@ class ProcessStudioProcessTab(ProcessStudio):
         else:
             messagebox.showinfo(result, 'Process saved', parent=fr_config)
 
+        print('process_val_dict in save button call: ',self.process_val_dict)
+
     def retrive_page_doc(self):
 
         self.test['Test']='Test is added'
@@ -1724,6 +1730,7 @@ class ProcessStudioProcessTab(ProcessStudio):
         cluster_var = self.process_wids_dict['ClusterOptionmenuVar']
         process_var = self.process_wids_dict['ProcessOptionmenuVar']
         page_var = self.process_wids_dict['PageOptionmenuVar']
+        page_index_var = self.process_wids_dict['PageIndexVar']
 
         cluster=cluster_var.get()
         process=process_var.get()
@@ -1733,6 +1740,7 @@ class ProcessStudioProcessTab(ProcessStudio):
         print('latest_page_doc: ', latest_page_doc)
 
         page_index=latest_page_doc['pageindex']
+        page_index_var.set(page_index)
         page_table_dict=latest_page_doc['table']
         output_table_dict=latest_page_doc['output']['Table']
         global storein_output_dict
@@ -1779,21 +1787,172 @@ class ProcessStudioProcessTab(ProcessStudio):
 
     def run_button_call(self):
         x = 100
-        self.derive_run_script()
+        output_store=self.derive_run_script()
+        print("output store in run button call: ", output_store)
 
     def derive_run_script(self):
+        fr_config = self.process_wids_dict['ConfigureFrame']
+        self.db = Database.database(self.primary_db_path, self.secondary_db_path)  # create db object
         # store all the pages for the slected process sorted as per page index in a list ( each page doc inside the list is a dictionary)
         latest_pages_doc=self.retrive_latest_indexed_pages_doc()
 
+        output_store={}
+        #output_store = {'page1': {'x': 100}}
+        module_list=[]
+        module_script=''
+        script=''
+
+        function_script=''
+        outcome_script,outcome_script_try,outcome_script_except='','',''
+        function_name,outcome_name='',''
         #loop table dictionary in
         for each_page_doc in latest_pages_doc: #loop pages in pages doc list
             table=each_page_doc['table'] #store table dictionary in the page doc
+            page_index=each_page_doc['pageindex'] #store the page index
+            page_output_store=each_page_doc['output']['Table'] #store the output store for page
+            page=each_page_doc['page'] # store ethe page name
+            output_store[page]=page_output_store # store the
+
+
+            action_loops=0
+
             for each_row_index in table: #loop each row in the table dictionary of the each page doc dictionary
+
+                function_name='function_' + str(page_index) + "_" + str(each_row_index)
+                outcome_name = 'outcome_' + str(page_index) + "_" + str(each_row_index)
+
+
+                input_script,output_script,code_script = '',"",""
+
                 handle=table[each_row_index]['Handle'] #store handle string
                 action=table[each_row_index]['Action'] #store action string
                 input_dict = table[each_row_index]['Input']  # store input dictionary
                 output_dict = table[each_row_index]['Output']  # store output dictionary
                 exception_dict = table[each_row_index]['Exception']  # store exception dictionary
+                action_doc=self.db.retrive_latest_action_doc(handler=handle,action=action)
+                code_dict=action_doc[0]['code']
+
+                zero_tab="\n"
+                one_tab = '\n\t'
+                two_tabs = '\n\t\t'
+                three_tabs = '\n\t\t\t'
+                four_tabs='\n\t\t\t\t'
+                if action=='Loop-Start':
+                    action_loops=action_loops+1
+                elif action=='Loop-End':
+                    action_loops = action_loops - 1
+
+                for each in range(action_loops-1):
+                    one_tab = one_tab + "\t"
+                    two_tabs = two_tabs + "\t"
+                    three_tabs = three_tabs + "\t"
+                    four_tabs = four_tabs + "\t"
+
+                for each in range(action_loops-1):
+                    zero_tab = zero_tab + "\t"
+
+
+                # derive module script
+                page_module_dict = action_doc[0]['module']
+                for each_row in page_module_dict:
+                    module_name = page_module_dict[each_row]['ModuleName']
+                    if module_name not in module_list:
+                        module_list.append(module_name)
+                        module_script = module_script + '\n\timport ' + module_name
+
+                print("input dict in run button call: ",input_dict)
+
+                # create input script
+                input_dict=eval(input_dict)
+                for each_row in input_dict:
+                    print(each_row)
+                    InputValue=input_dict[each_row]['InputValue']
+                    InputName=input_dict[each_row]['InputName']
+
+                    if InputValue == '':
+                        InputValue = 'str()'
+                    elif '#' in InputValue[0]:
+                        index=InputValue.replace('#','')
+                        #InputValue= "eval('output_store' + InputValue.replace('#',''))"
+                        #InputValue = "eval(" + 'output_store' + index + ") "
+                        InputValue = str(output_store) + index
+                    else:
+                        InputValue = InputValue
+
+                    print('input value in run: ',InputValue)
+                    input_script = input_script + '\n\t\t' + InputName + "=" + InputValue
+
+                # create output script
+                output_dict=eval(output_dict)
+                for each_row in output_dict:
+                    OutputName=output_dict[each_row]['OutputName']
+                    OutputValue=output_dict[each_row]['OutputValue']
+
+                    if OutputValue == "":
+                        OutputValue = 'str()'
+                    else:
+                        OutputValue = OutputValue
+                    output_script = output_script + '\n\t\t' + OutputName + "=" + OutputValue
+
+                # create code script
+                #code_dict=eval(code_dict)
+                print("code dict in run button call: ",code_dict)
+                for each_row in code_dict:
+                    code_line=code_dict[each_row]
+                    code_script = code_script + '\n\t\t' + code_line
+
+                # create function combining module,input,output and code script
+                if action!='Loop-Start' and action!='Loop-End' :
+                    #function_script = function_script + "\n\tdef "+ function_name + "():\n\n\t\t#input" + input_script + "\n\n\t\t#output" + output_script + "\n\n\t\t#code" + code_script
+                    function_script = function_script + "\n\tdef " + function_name + "():\n\n\t\t#input" + input_script + "\n\n\t\t#output" + output_script +  "\n\n\t\t#output_dict\n\n\t\toutput_dict=" + str(output_dict) +    "\n\n\t\t#code" + code_script #output_dict
+
+                    if action_loops == 0:
+                        print('output dict: ',output_dict)
+
+                        '''outcome_script_try = "\ntry:\n\t" + outcome_name + "= " + function_name + "()\n\tloop_count=0" \
+                                             "\n\tfor each in" + outcome_name  + ":\n\t\toutput_store['" + page + "']['"+ "output_dict[loop_count]['StoreIn']" + "'] = " + outcome_name + "[loop_count]" \
+                                             "\n\t\tloop_count+=1"'''
+
+                        #outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tloop_count = 0 \n\tfor each in " + outcome_name + ":\n\t\toutput_store['" + page + "'][" + "output_dict[loop_count]['StoreIn']" + "] = " + outcome_name + "[loop_count]"                                                                                                                                                                                                                                                                                                                                                                                                                                   "\n\t\tloop_count+=1"
+
+                        outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tprint('outcome before making list: '," + outcome_name + ")\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tprint('outcome: '," + outcome_name + ")" + "\n\toutput_dict=" + str(output_dict) +"\n\tloop_count = 1 \n\tfor each in " + outcome_name + ":\n\t\tprint(output_dict[loop_count]['StoreIn'])\n\t\toutput_store['" + page + "'][ (output_dict)[loop_count]['StoreIn'] ] = " + "each\n\t\tprint(output_dict[loop_count]['StoreIn'])"                                                                                                                                                                                                                                                                                                                                                                                                                                   "\n\t\tloop_count+=1"
+
+                        #outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tprint(" + outcome_name + ")\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tprint('outcome: '," + outcome_name + ")\n\tloop_count = 0 \n\tfor each in " + outcome_name + ":\n\t\toutput_store['" + page + "'][ output_dict[loop_count]['StoreIn'] ] = " + outcome_name + "[loop_count]\n\t\tprint(output_dict[loop_count]['StoreIn'])"                                                                                                                                                                                                                                                                                                                                                                                                                                   "\n\t\tloop_count+=1"
+
+                        outcome_script_except = "\nexcept Exception as e:\n\terror='Error: Error in running the action in row:" + each_row_index + "in page: " + page +  " as: '" + '+ str(e)' + "\n\tmessagebox.showerror('Error',error,parent=fr_config)"
+
+                        outcome_script=outcome_script + outcome_script_try+outcome_script_except
+
+                    else:
+                        #outcome_script_try = one_tab+"try:" + two_tabs + outcome_name + "=" + function_name + "()" + two_tabs + "loop_count=0" + two_tabs + "for each in" + outcome_name + ":" + three_tabs + "toutput_store[" + page + "][" + "output_dict[loop_count]['StoreIn']" + "] =" +  outcome_name + "[loop_count]" + three_tabs + "loop_count+=1"
+                        #outcome_script_try = "\ntry:" + two_tabs + outcome_name +"=function()" + two_tabs + "loop_count=0" + two_tabs + "for each in outcome_dict:" + three_tabs + "outcome_dict[each] = outcome[loop_count]"  + three_tabs + "loop_count+=1"
+                        outcome_script_try = one_tab + "try:" + two_tabs + outcome_name + "=" + function_name + "()" + two_tabs + "if len(str(" + outcome_name + "))>0:" + three_tabs + "if 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):" + four_tabs+ outcome_name + "=[" + outcome_name + "]" + two_tabs + "loop_count = 0" + two_tabs + "for each in " + outcome_name + ":" + three_tabs + "output_store[" + page + "][" + "eval(output_dict[loop_count]['StoreIn'])" + "] = " + outcome_name + "[loop_count]" + three_tabs  + "loop_count+=1"
+
+                        outcome_script_except = one_tab+"except Exception as e:" + two_tabs + "error='Error: Error in running the action in row: " + each_row_index + " in page: " + page + " as: '" + '+ str(e)' + two_tabs + "messagebox.showerror('Error',error,parent=fr_config)"
+                        #outcome_script = outcome_script + outcome_script_try + outcome_script_except
+                        outcome_script = outcome_script_try + outcome_script_except
+                if action == 'Loop-Start':
+                    loop_string=zero_tab + "for each in " + InputValue + ":"
+                    outcome_script = outcome_script + loop_string
+
+
+
+        # add try and excpet portion in function script
+        function_script="\ntry:" +module_script +function_script + "\nexcept Exception as e:\n\terror='Error: Error in creating the function script as:'" + '+ str(e)' \
+                                "\n\tmessagebox.showerror('Error',error,parent=fr_config)"
+
+
+        #print("function script in run button call: ",function_script)
+        #print("outcome script in run button call: ", outcome_script)
+
+        script=function_script+outcome_script
+        print(" script in run button call: ", script)
+
+        exec(script)
+        return output_store
+
+
+
 
 
 

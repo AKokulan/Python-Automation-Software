@@ -5,62 +5,13 @@ import tkinter.scrolledtext as scrolledtext
 from PIL import ImageTk, Image
 import time
 
-#import files
 import Database_Del, ObjectStudio, ProcessStudio_del,ProcessStudio,HandlerStudio
-outcome_dict={'m':''}
+function_name='function_name'
 
-try:
+outcome_name='outcome_name'
+page='page'
 
-    # import modules
-    import os
+outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tloop_count = 0 \n\tfor each in" + outcome_name  + ":\n\t\toutput_store[" + page + "]["+ "output_dict[loop_count]['StoreIn']" + "] = " + outcome_name + "[loop_count]" \
+                                             "\n\t\tloop_count+=1"
 
-
-    def function():
-
-        # input
-        x = 100
-        y = 27
-
-        # output
-        m = 10
-
-        # code
-        m = x * y
-        return m
-except Exception as e:
-    error = 'Error: Error in running the action as:' + str(e)
-    messagebox.showerror('Error', error)
-try:
-    outcome = function()
-    if len(str(outcome))>0:
-        print(type(outcome))
-        #if str(type(outcome))=="<class 'int'>" or str(type(outcome))=="<class 'str'>":
-        if 'int' in  str(type(outcome))  or 'str' in  str(type(outcome)) :
-            print('test1')
-            outcome=[outcome]
-            print(outcome)
-        print(outcome)
-        loop_count = 0
-        for each in outcome_dict:
-            outcome_dict[each] = outcome[loop_count]
-            loop_count += 1
-
-    print(outcome_dict)
-    #if len(outcome_dict)>0:
-       # messagebox.showinfo('Result', outcome_dict)
-    #messagebox.showinfo('Result', outcome_dict)
-except Exception as e:
-    error = 'Error: Error in running the action as:' + str(e)
-    print(error)
-    #messagebox.showerror('Error', error)
-
-
-x=100
-y='test'
-
-print(type(x))
-print(type(y))
-
-
-
-"\n\toutcome = function()\n\tif len(str(outcome))>0:\n\t\tif str(type(outcome))=='<class 'int'>' or str(type(outcome))=='<class 'str'>': \n\t\t\toutcome=[outcome]\n\tloop_count = 0 \n\tfor each in outcome_dict:\n\t\t\toutcome_dict[each] = outcome[loop_count]\n\t\t\tloop_count += 1"
+print(outcome_script_try)
