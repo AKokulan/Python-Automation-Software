@@ -6,12 +6,20 @@ from PIL import ImageTk, Image
 import time
 
 import Database_Del, ObjectStudio, ProcessStudio_del,ProcessStudio,HandlerStudio
-function_name='function_name'
+output_store={'Page1':{"y":100,"rt":54545}}
 
-outcome_name='outcome_name'
-page='page'
+# importing pandas as pd
+import pandas as pd
 
-outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tloop_count = 0 \n\tfor each in" + outcome_name  + ":\n\t\toutput_store[" + page + "]["+ "output_dict[loop_count]['StoreIn']" + "] = " + outcome_name + "[loop_count]" \
-                                             "\n\t\tloop_count+=1"
+# dictionary of lists
+dict = {'name': ["aparna", "pankaj", "sudhir", "Geeku"],
+        'degree': ["MBA", "BCA", "M.Tech", "MBA"],
+        'score': [90, 40, 80, 98]}
 
-print(outcome_script_try)
+# creating a dataframe from a dictionary
+df = pd.DataFrame(dict)
+
+# iterating over rows using iterrows() function
+print(df)
+for i, j in eval('df').iterrows():
+    print(j['name'])

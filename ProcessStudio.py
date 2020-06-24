@@ -521,6 +521,7 @@ class ProcessStudioProcessTab(ProcessStudio):
         self.page_om_var_val = page_val
         children_windows=fr_config.winfo_children()
         if page_val=="Create New Page":
+            self.process_table_var_dict={}
             self.destory_widgets_for_new_page_call()
 
             #new page label
@@ -546,6 +547,7 @@ class ProcessStudioProcessTab(ProcessStudio):
             self.process_wids_dict['NewPageCancelButton'] = bt_new_process_cancel
 
         else:
+            self.process_table_var_dict={}
             self.var_table=[]
             self.retrive_page_doc()
             # var_value = var.get()
@@ -1011,7 +1013,6 @@ class ProcessStudioProcessTab(ProcessStudio):
         print('var table:\n', self.var_table)
         print('var table dictionary:\n', self.process_table_var_dict)
         print('var process dictionary:\n', self.process_var_dict)
-
 
     # **
     def del_row_button_call(self):
@@ -1694,6 +1695,7 @@ class ProcessStudioProcessTab(ProcessStudio):
             messagebox.showerror('Error','Error in running the step as: ' + str(e), parent=self.process_studio_notebook)
 
     def save_document_button_call(self):
+        self.process_val_dict = {}  # clear all value
         # get widgets
         fr_config = self.process_wids_dict['ConfigureFrame']
 
@@ -1720,6 +1722,7 @@ class ProcessStudioProcessTab(ProcessStudio):
             messagebox.showinfo(result, 'Process saved', parent=fr_config)
 
         print('process_val_dict in save button call: ',self.process_val_dict)
+        self.process_val_dict={} # clear all value
 
     def retrive_page_doc(self):
 
@@ -1794,167 +1797,290 @@ class ProcessStudioProcessTab(ProcessStudio):
         fr_config = self.process_wids_dict['ConfigureFrame']
         self.db = Database.database(self.primary_db_path, self.secondary_db_path)  # create db object
         # store all the pages for the slected process sorted as per page index in a list ( each page doc inside the list is a dictionary)
-        latest_pages_doc=self.retrive_latest_indexed_pages_doc()
+        latest_pages_doc = self.retrive_latest_indexed_pages_doc()
 
-        output_store={}
-        #output_store = {'page1': {'x': 100}}
-        module_list=[]
-        module_script=''
-        script=''
+        #output_store = {} # create a ditionary where output for each stage will be saved by pages ..ex: {'page1:{'output1':10,'output2':250}}
+        store = {}  # create a ditionary where output for each stage will be saved by pages ..ex: {'page1:{'output1':10,'output2':250}}
 
-        function_script=''
-        outcome_script,outcome_script_try,outcome_script_except='','',''
-        function_name,outcome_name='',''
-        #loop table dictionary in
-        for each_page_doc in latest_pages_doc: #loop pages in pages doc list
-            table=each_page_doc['table'] #store table dictionary in the page doc
-            page_index=each_page_doc['pageindex'] #store the page index
-            page_output_store=each_page_doc['output']['Table'] #store the output store for page
-            page=each_page_doc['page'] # store ethe page name
-            output_store[page]=page_output_store # store the
+        module_list = []
 
+        # create empty string for all the portion of script
+        outcome_script, outcome_script_try, outcome_script_except,script,function_script,module_script = '', '', '','','',''
 
-            action_loops=0
+        function_name, outcome_name = '', '' # for each action, unique funciton name and outcome name will be cerated
 
-            for each_row_index in table: #loop each row in the table dictionary of the each page doc dictionary
+        # loop each row in each page and create a complete script
+        for each_page_doc in latest_pages_doc:  # loop pages in pages doc list
+            table = each_page_doc['table']  # store table dictionary in the page doc
+            page_index = each_page_doc['pageindex']  # store the page index
+            page_output_store = each_page_doc['output']['Table']  # store the output store for page
+            page = each_page_doc['page']  # store ethe page name
+            #output_store[page] = page_output_store  # store the
 
-                function_name='function_' + str(page_index) + "_" + str(each_row_index)
-                outcome_name = 'outcome_' + str(page_index) + "_" + str(each_row_index)
+            action_loops = 0 # store number of Loop-Start encountered in actions. Accordingly script indent will be derived
+            for each_row_index in table:  # loop each row in the table dictionary of the each page doc dictionary
 
+                function_name = 'function_' + str(page_index) + "_" + str(each_row_index) # creare function name based on page index and row index. Ex: function_1_5
+                outcome_name = 'outcome_' + str(page_index) + "_" + str(each_row_index) # creare outcome name based on page index and row index. Ex: outcome_1_5
 
-                input_script,output_script,code_script = '',"",""
+                input_script, output_script, code_script = '', "", "" # create empty string to store scripts for input , output and code
 
-                handle=table[each_row_index]['Handle'] #store handle string
-                action=table[each_row_index]['Action'] #store action string
+                handle = table[each_row_index]['Handle']  # store handle string
+                action = table[each_row_index]['Action']  # store action string
                 input_dict = table[each_row_index]['Input']  # store input dictionary
                 output_dict = table[each_row_index]['Output']  # store output dictionary
                 exception_dict = table[each_row_index]['Exception']  # store exception dictionary
-                action_doc=self.db.retrive_latest_action_doc(handler=handle,action=action)
-                code_dict=action_doc[0]['code']
+                action_doc = self.db.retrive_latest_action_doc(handler=handle, action=action) # get and store lates action document. This a list inside contain the lates action document dictuionary. Ex [{}]
+                code_dict = action_doc[0]['code']  # store code dictionary. Code is taken from action document, not from
 
-                zero_tab="\n"
+                # below tabs string will be used to derive script in for loops in script
+                zero_tab = "\n"
                 one_tab = '\n\t'
                 two_tabs = '\n\t\t'
                 three_tabs = '\n\t\t\t'
-                four_tabs='\n\t\t\t\t'
-                if action=='Loop-Start':
-                    action_loops=action_loops+1
-                elif action=='Loop-End':
+                four_tabs = '\n\t\t\t\t'
+
+                # set the number of action loops in the script based on the action--> Loop-Start or Loop-End encounetered in each row
+                if action == 'Loop-Start':
+                    action_loops = action_loops + 1
+                elif action == 'Loop-End':
                     action_loops = action_loops - 1
 
-                for each in range(action_loops-1):
+                # base don number of action loops, set the tabs string
+                for each in range(action_loops - 1):
+                    zero_tab = zero_tab + "\t"
                     one_tab = one_tab + "\t"
                     two_tabs = two_tabs + "\t"
                     three_tabs = three_tabs + "\t"
                     four_tabs = four_tabs + "\t"
 
-                for each in range(action_loops-1):
-                    zero_tab = zero_tab + "\t"
-
-
                 # derive module script
-                page_module_dict = action_doc[0]['module']
-                for each_row in page_module_dict:
-                    module_name = page_module_dict[each_row]['ModuleName']
-                    if module_name not in module_list:
-                        module_list.append(module_name)
-                        module_script = module_script + '\n\timport ' + module_name
+                page_module_dict = action_doc[0]['module'] # store module dictionary
+                for each_row in page_module_dict: #loop the rows in module dictionary
+                    module_name = page_module_dict[each_row]['ModuleName'] # store the module name in each row
+                    if module_name not in module_list: # # check whether module name is already taken for acript
+                        module_list.append(module_name) # if module name is not already taken, add into the module list for future check
+                        module_script = module_script + '\n\timport ' + module_name # create module script
 
-                print("input dict in run button call: ",input_dict)
+                run_data_dict = {'input_dict': input_dict, 'output_dict': output_dict, 'code_dict': code_dict,
+                                 'function_name': function_name,
+                                 'outcome_name': outcome_name, 'page': page, 'each_row_index': each_row_index,
+                                 'outcome_script': outcome_script}
 
-                # create input script
-                input_dict=eval(input_dict)
-                for each_row in input_dict:
-                    print(each_row)
-                    InputValue=input_dict[each_row]['InputValue']
-                    InputName=input_dict[each_row]['InputName']
-
-                    if InputValue == '':
-                        InputValue = 'str()'
-                    elif '#' in InputValue[0]:
-                        index=InputValue.replace('#','')
-                        #InputValue= "eval('output_store' + InputValue.replace('#',''))"
-                        #InputValue = "eval(" + 'output_store' + index + ") "
-                        InputValue = str(output_store) + index
-                    else:
-                        InputValue = InputValue
-
-                    print('input value in run: ',InputValue)
-                    input_script = input_script + '\n\t\t' + InputName + "=" + InputValue
-
-                # create output script
-                output_dict=eval(output_dict)
-                for each_row in output_dict:
-                    OutputName=output_dict[each_row]['OutputName']
-                    OutputValue=output_dict[each_row]['OutputValue']
-
-                    if OutputValue == "":
-                        OutputValue = 'str()'
-                    else:
-                        OutputValue = OutputValue
-                    output_script = output_script + '\n\t\t' + OutputName + "=" + OutputValue
-
-                # create code script
-                #code_dict=eval(code_dict)
-                print("code dict in run button call: ",code_dict)
-                for each_row in code_dict:
-                    code_line=code_dict[each_row]
-                    code_script = code_script + '\n\t\t' + code_line
+                tabs_dict = {'zero_tab': zero_tab, 'one_tab': one_tab, 'two_tabs': two_tabs, 'three_tabs': three_tabs,
+                             'four_tabs': four_tabs}
 
                 # create function combining module,input,output and code script
-                if action!='Loop-Start' and action!='Loop-End' :
-                    #function_script = function_script + "\n\tdef "+ function_name + "():\n\n\t\t#input" + input_script + "\n\n\t\t#output" + output_script + "\n\n\t\t#code" + code_script
-                    function_script = function_script + "\n\tdef " + function_name + "():\n\n\t\t#input" + input_script + "\n\n\t\t#output" + output_script +  "\n\n\t\t#output_dict\n\n\t\toutput_dict=" + str(output_dict) +    "\n\n\t\t#code" + code_script #output_dict
+                if action != 'Loop-Start' and action != 'Loop-End': #do below activity if action is neither Loop-Start not Loop-End
 
                     if action_loops == 0:
-                        print('output dict: ',output_dict)
-
-                        '''outcome_script_try = "\ntry:\n\t" + outcome_name + "= " + function_name + "()\n\tloop_count=0" \
-                                             "\n\tfor each in" + outcome_name  + ":\n\t\toutput_store['" + page + "']['"+ "output_dict[loop_count]['StoreIn']" + "'] = " + outcome_name + "[loop_count]" \
-                                             "\n\t\tloop_count+=1"'''
-
-                        #outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tloop_count = 0 \n\tfor each in " + outcome_name + ":\n\t\toutput_store['" + page + "'][" + "output_dict[loop_count]['StoreIn']" + "] = " + outcome_name + "[loop_count]"                                                                                                                                                                                                                                                                                                                                                                                                                                   "\n\t\tloop_count+=1"
-
-                        outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tprint('outcome before making list: '," + outcome_name + ")\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tprint('outcome: '," + outcome_name + ")" + "\n\toutput_dict=" + str(output_dict) +"\n\tloop_count = 1 \n\tfor each in " + outcome_name + ":\n\t\tprint(output_dict[loop_count]['StoreIn'])\n\t\toutput_store['" + page + "'][ (output_dict)[loop_count]['StoreIn'] ] = " + "each\n\t\tprint(output_dict[loop_count]['StoreIn'])"                                                                                                                                                                                                                                                                                                                                                                                                                                   "\n\t\tloop_count+=1"
-
-                        #outcome_script_try = "\ntry:\n\t" + outcome_name + "=" + function_name + "()\n\tprint(" + outcome_name + ")\n\tif len(str(" + outcome_name + "))>0:\n\t\tif 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):\n\t\t\t" + outcome_name + "=[" + outcome_name + "]\n\tprint('outcome: '," + outcome_name + ")\n\tloop_count = 0 \n\tfor each in " + outcome_name + ":\n\t\toutput_store['" + page + "'][ output_dict[loop_count]['StoreIn'] ] = " + outcome_name + "[loop_count]\n\t\tprint(output_dict[loop_count]['StoreIn'])"                                                                                                                                                                                                                                                                                                                                                                                                                                   "\n\t\tloop_count+=1"
-
-                        outcome_script_except = "\nexcept Exception as e:\n\terror='Error: Error in running the action in row:" + each_row_index + "in page: " + page +  " as: '" + '+ str(e)' + "\n\tmessagebox.showerror('Error',error,parent=fr_config)"
-
-                        outcome_script=outcome_script + outcome_script_try+outcome_script_except
+                        outcome_script = self.outcome_script_for_zero_loop(run_data_dict=run_data_dict)
 
                     else:
-                        #outcome_script_try = one_tab+"try:" + two_tabs + outcome_name + "=" + function_name + "()" + two_tabs + "loop_count=0" + two_tabs + "for each in" + outcome_name + ":" + three_tabs + "toutput_store[" + page + "][" + "output_dict[loop_count]['StoreIn']" + "] =" +  outcome_name + "[loop_count]" + three_tabs + "loop_count+=1"
-                        #outcome_script_try = "\ntry:" + two_tabs + outcome_name +"=function()" + two_tabs + "loop_count=0" + two_tabs + "for each in outcome_dict:" + three_tabs + "outcome_dict[each] = outcome[loop_count]"  + three_tabs + "loop_count+=1"
-                        outcome_script_try = one_tab + "try:" + two_tabs + outcome_name + "=" + function_name + "()" + two_tabs + "if len(str(" + outcome_name + "))>0:" + three_tabs + "if 'int' in  str(type(" + outcome_name + "))  or 'str' in  str(type(" + outcome_name + ")):" + four_tabs+ outcome_name + "=[" + outcome_name + "]" + two_tabs + "loop_count = 0" + two_tabs + "for each in " + outcome_name + ":" + three_tabs + "output_store[" + page + "][" + "eval(output_dict[loop_count]['StoreIn'])" + "] = " + outcome_name + "[loop_count]" + three_tabs  + "loop_count+=1"
-
-                        outcome_script_except = one_tab+"except Exception as e:" + two_tabs + "error='Error: Error in running the action in row: " + each_row_index + " in page: " + page + " as: '" + '+ str(e)' + two_tabs + "messagebox.showerror('Error',error,parent=fr_config)"
-                        #outcome_script = outcome_script + outcome_script_try + outcome_script_except
-                        outcome_script = outcome_script_try + outcome_script_except
+                        outcome_script =self.outcome_script_for_nonzero_loop(run_data_dict=run_data_dict,tabs_dict=tabs_dict)
                 if action == 'Loop-Start':
-                    loop_string=zero_tab + "for each in " + InputValue + ":"
-                    outcome_script = outcome_script + loop_string
+                    outcome_script = self.outcome_script_for_loop_start_action(run_data_dict=run_data_dict,tabs_dict=tabs_dict)
 
-
-
-        # add try and excpet portion in function script
-        function_script="\ntry:" +module_script +function_script + "\nexcept Exception as e:\n\terror='Error: Error in creating the function script as:'" + '+ str(e)' \
-                                "\n\tmessagebox.showerror('Error',error,parent=fr_config)"
-
-
-        #print("function script in run button call: ",function_script)
-        #print("outcome script in run button call: ", outcome_script)
-
-        script=function_script+outcome_script
-        print(" script in run button call: ", script)
-
+        # print("outcome script in run button call: ", outcome_script)
+        module_script = "\ntry:" + module_script + "\nexcept Exception as e:\n\terror='Error: Error in module the action in row: " + " as: '" + '+ str(e)' + "\n\tmessagebox.showerror('Error',error,parent=fr_config)"
+        script =module_script+ outcome_script
         exec(script)
-        return output_store
+        print(" script in run button call: ", script)
+        return store
+
+    def outcome_script_for_zero_loop(self,run_data_dict):
+        input_dict = run_data_dict['input_dict']
+        output_dict = run_data_dict['output_dict']
+        code_dict = run_data_dict['code_dict']
+        function_name = run_data_dict['function_name']
+        outcome_name = run_data_dict['outcome_name']
+        page = run_data_dict['page']
+        each_row_index = run_data_dict['each_row_index']
+        outcome_script=run_data_dict['outcome_script']
+
+        input_script,output_script,code_script,function_script='','','',''
+
+        # create input script
+        input_dict = eval(input_dict)  # store input dictionary
+        for each_row in input_dict:  # loop each row in input dictionary
+            InputValue = input_dict[each_row]['InputValue']  # store input value
+            InputName = input_dict[each_row]['InputName']  # store input name
+
+            if InputValue == '':  # check whether the input value is empty
+                InputValue = 'str()'  # if the input value is empty, make it as str() - which is string
+            elif '#' in InputValue[
+                0]:  # check whther input value start with # sign. Because it means that the value will be taken from output store dictioanry from previous run
+                index = InputValue.replace('#', '')  # if hash sign is in start of the input value, replace it
+                # InputValue = str('output_store') + index #ste the input value from output store. Ex: output_store['page1']['valuekye']
+
+                InputValue = index  # ste the input value from output store. Ex: output_store['page1']['valuekye']
+            else:
+                InputValue = InputValue  # in all other conditions, set the value as given
+            input_script = input_script + '\n\t\t' + InputName + "=" + InputValue
+
+        # create output script
+        output_dict = eval(output_dict)  # store output dictionary
+        for each_row in output_dict:  # loop each row in output dictionary
+            OutputName = output_dict[each_row]['OutputName']  # store output name
+            OutputValue = output_dict[each_row]['OutputValue']  # store output value
+
+            if OutputValue == "":  # check whether the output value is empty
+                OutputValue = 'str()'  # if the output value is empty, make it as str() - which is string
+            else:
+                OutputValue = OutputValue  # in all other conditions, set the value as given
+            output_script = output_script + '\n\t\t' + OutputName + "=" + OutputValue
+
+        # create code script
+        for each_row in code_dict:  # loop each line of code
+            code_line = code_dict[each_row]  # store code line
+            code_script = code_script + '\n\t\t' + code_line
+
+            # derive function script without try block
+        function_script = "\n\tdef " + function_name + "(store):\n\n\t\t#input" + \
+                          input_script + "\n\n\t\t#output" + output_script + "\n\n\t\t#output_dict\n\n\t\toutput_dict=" + \
+                          str(output_dict) + "\n\n\t\t#code" + code_script  # output_dict
+
+        outcome_script_try = "\ntry:" \
+                                 "\n\t" + function_script + \
+                                 "\n\t" + outcome_name + "=" + function_name + "(store)" \
+                                  "\n\tprint('outcome before making list: '," + outcome_name + ")" \
+                                  "\n\tif len(str(" + outcome_name + "))>0:" \
+                                        "\n\t\tif 'int' in  str(type(" + outcome_name + "))  or  'float' in  str(type(" + outcome_name + "))  or  'str' in  str(type(" + outcome_name + ")):" \
+                                            "\n\t\t\t" + outcome_name + "=[" + outcome_name + "]" \
+                                 "\n\tprint('outcome: '," + outcome_name + ")" + \
+                                 "\n\toutput_dict=" + str(output_dict) + \
+                                 "\n\tloop_count = 1 " \
+                                 "\n\tfor each in " + outcome_name + ":" \
+                                        "\n\t\tprint(output_dict[loop_count]['StoreIn'])" \
+                                        "\n\t\tif '" + page + "' not in store:" \
+                                                "\n\t\t\tstore['" + page + "']={} " \
+                                        "\n\t\tstore['" + page + "'][ (output_dict)[loop_count]['StoreIn'] ] = " + "each" \
+                                        "\n\t\tprint(output_dict[loop_count]['StoreIn'])" + \
+                                        "\n\t\tloop_count+=1"
+
+        outcome_script_except = "\nexcept Exception as e:" \
+                                "\n\terror='Error: Error in running the action in row: " + each_row_index + " in page: " + page + " as: '" + '+ str(e)' + \
+                                "\n\tmessagebox.showerror('Error',error,parent=fr_config)" +\
+                                "\n\traise"
+
+        outcome_script = outcome_script + outcome_script_try + outcome_script_except
+        return outcome_script
+
+    def outcome_script_for_nonzero_loop(self,run_data_dict,tabs_dict):
+        input_dict=run_data_dict['input_dict']
+        output_dict=run_data_dict['output_dict']
+        code_dict=run_data_dict['code_dict']
+        function_name=run_data_dict['function_name']
+        outcome_name=run_data_dict['outcome_name']
+        page=run_data_dict['page']
+        each_row_index=run_data_dict['each_row_index']
+        outcome_script = run_data_dict['outcome_script']
+
+        zero_tab,one_tab,two_tabs,three_tabs,four_tabs=tabs_dict['zero_tab'],tabs_dict['one_tab'],tabs_dict['two_tabs'],tabs_dict['three_tabs'],tabs_dict['four_tabs']
+        input_script, output_script, code_script, function_script = '', '', '', ''
+        # create input script
+        input_dict = eval(input_dict)  # store input dictionary
+        for each_row in input_dict:  # loop each row in input dictionary
+            InputValue = input_dict[each_row]['InputValue']  # store input value
+            InputName = input_dict[each_row]['InputName']  # store input name
+
+            if InputValue == '':  # check whether the input value is empty
+                InputValue = 'str()'  # if the input value is empty, make it as str() - which is string
+            elif '#' in InputValue[0]:  # check whther input value start with # sign. Because it means that the value will be taken from output store dictioanry from previous run
+                index = InputValue.replace('#', '')  # if hash sign is in start of the input value, replace it
+                # InputValue = str('output_store') + index #ste the input value from output store. Ex: output_store['page1']['valuekye']
+
+                InputValue = index  # ste the input value from output store. Ex: output_store['page1']['valuekye']
 
 
+            else:
+                InputValue = InputValue  # in all other conditions, set the value as given
+            input_script = input_script + three_tabs + InputName + "=" + InputValue
+
+        # create output script
+        output_dict = eval(output_dict)  # store output dictionary
+        for each_row in output_dict:  # loop each row in output dictionary
+            OutputName = output_dict[each_row]['OutputName']  # store output name
+            OutputValue = output_dict[each_row]['OutputValue']  # store output value
+
+            if OutputValue == "":  # check whether the output value is empty
+                OutputValue = 'str()'  # if the output value is empty, make it as str() - which is string
+            else:
+                OutputValue = OutputValue  # in all other conditions, set the value as given
+            output_script = output_script + three_tabs + OutputName + "=" + OutputValue
+
+        # create code script
+        for each_row in code_dict:  # loop each line of code
+            code_line = code_dict[each_row]  # store code line
+            code_script = code_script + three_tabs + code_line
+
+        # derive function script without try block
+        function_script = two_tabs + "def " + function_name + "(store):" + \
+                              three_tabs + "#input" + input_script + "" + \
+                              three_tabs + "#output" + output_script + \
+                              three_tabs + "#output_dict" + \
+                              three_tabs + "output_dict=" + str(output_dict) + \
+                              three_tabs + "#code" + code_script  # output_dict
+
+        outcome_script_try = one_tab + "try:" + \
+                                 two_tabs + function_script + \
+                                 two_tabs + outcome_name + "=" + function_name + "(store)" + \
+                                 two_tabs + "print('outcome before making list: '," + outcome_name + ")" + \
+                                 two_tabs + "if len(str(" + outcome_name + "))>0:" + \
+                                    three_tabs + "if 'int' in  str(type(" + outcome_name + "))  or  'float' in  str(type(" + outcome_name + "))  or  'str' in  str(type(" + outcome_name + ")):" + \
+                                        four_tabs + outcome_name + "=[" + outcome_name + "]" + \
+                                 two_tabs + "print('outcome: '," + outcome_name + ")" + \
+                                 two_tabs + "output_dict=" + str(output_dict) + \
+                                 two_tabs + "loop_count = 1 " + \
+                                 two_tabs + "for each in " + outcome_name + ":" + \
+                                     three_tabs + "print(output_dict[loop_count]['StoreIn'])" + \
+                                     three_tabs + "if '" + page + "' not in store:" + \
+                                        four_tabs + "store['" + page + "']={} " + \
+                                     three_tabs + "store['" + page + "'][ (output_dict)[loop_count]['StoreIn'] ] = " + "each" + \
+                                     three_tabs + "print(output_dict[loop_count]['StoreIn'])" + \
+                                     three_tabs + "loop_count+=1"
+
+        outcome_script_except = one_tab + "except Exception as e:" + two_tabs + "error='Error: Error in running the action in row: " + each_row_index + " in page: " + page + " as: '" + '+ str(e)' + two_tabs + "messagebox.showerror('Error',error,parent=fr_config)"
+        # outcome_script = outcome_script + outcome_script_try + outcome_script_except
+        outcome_script = outcome_script + outcome_script_try + outcome_script_except
+
+        return outcome_script
+
+    def outcome_script_for_loop_start_action(self,run_data_dict,tabs_dict):
+        fr_config = self.process_wids_dict['ConfigureFrame']
+
+        input_dict = run_data_dict['input_dict']
+        outcome_script = run_data_dict['outcome_script']
+        each_row_index = run_data_dict['each_row_index']
+        zero_tab = tabs_dict['zero_tab']
+        input_dict = eval(input_dict)  # store input dictionary
+        InputValue=''
+        for each_row in input_dict:  # loop each row in input dictionary
+            InputValue = input_dict[each_row]['InputValue']  # store input value
+            InputName = input_dict[each_row]['InputName']  # store input name
+
+            if InputValue == '':  # check whether the input value is empty
+                InputValue = 'str()'  # if the input value is empty, make it as str() - which is string
+            elif '#' in InputValue[0]:  # check whther input value start with # sign. Because it means that the value will be taken from output store dictioanry from previous run
+                index = InputValue.replace('#', '')  # if hash sign is in start of the input value, replace it
+                # InputValue = str('output_store') + index #ste the input value from output store. Ex: output_store['page1']['valuekye']
+
+                InputValue = index  # ste the input value from output store. Ex: output_store['page1']['valuekye']
 
 
+            else:
+                InputValue = InputValue  # in all other conditions, set the value as given
 
+        print('input value is: ',InputValue.isnumeric())
+        if InputValue.isnumeric():
+            loop_string = zero_tab + "for EachLoop" + str(each_row_index) + "  in range(" + InputValue + "):"
+        else:
+            loop_string = zero_tab + "for Key" + str(each_row_index) + ",Column" + str(each_row_index) + " in eval(" + InputValue +  ").iterrows():"
+        #loop_string = zero_tab + "for Each in " + InputValue + ":"
+
+
+        outcome_script = outcome_script + loop_string
+        return outcome_script
 
     #all the latest page for the given process is retrived and sorted as per page index
     def retrive_latest_indexed_pages_doc(self):
